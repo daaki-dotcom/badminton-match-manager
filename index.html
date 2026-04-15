@@ -343,7 +343,8 @@ onValue(ref(db, ROOT), snap => {
     members = NAMES.map(n => ({ name: n, level: 'nov' }));
   }
 
-  matches = data.matches ? Object.values(data.matches) : [];
+  // matches はローカルのみ管理（タブを開くたびに初期化）
+  if (matches.length === 0) matches = [];
   courts  = data.courts  ?? 2;
 
   const ci = document.getElementById('court-input');
@@ -504,6 +505,18 @@ window.generateMatches = () => {
   if (pool.length < 2) { alert('対象メンバーが2人以上いません。'); return; }
   const limitPerPerson = parseInt(document.getElementById('limit-per-person').value) || 0;
   const limitTotal     = parseInt(document.getElementById('limit-total').value)      || 0;
+
+  // 全員最低1試合できるか確認
+  const minMatches = matchType === 'singles' ? Math.ceil(pool.length / 2) : Math.ceil(pool.length / 4);
+  const effectiveTotal = limitTotal > 0 ? limitTotal : 99999;
+  const effectivePerPerson = limitPerPerson > 0 ? limitPerPerson : 99999;
+  const minByPerson = matchType === 'singles' ? Math.ceil(pool.length / 2) : Math.ceil(pool.length / 4);
+  if (effectiveTotal < minMatches || effectivePerPerson < 1) {
+    const ok = confirm(`設定した試合数では全員が最低1試合できません。
+（必要最小試合数：${minMatches}試合）
+このまま続けますか？`);
+    if (!ok) return;
+  }
 
   matchType === 'singles'
     ? generateSingles(pool, limitPerPerson, limitTotal)
