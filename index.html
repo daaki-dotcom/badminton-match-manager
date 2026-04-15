@@ -63,6 +63,7 @@ input[type=number] { text-align: center; flex: none; }
 .fmt-btn { padding: 9px 18px; border-radius: 100px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid rgba(255,255,255,0.18); background: var(–surface2); color: var(–text-muted); transition: all 0.15s; font-family: ‘Noto Sans JP’, sans-serif; }
 .fmt-btn:hover { border-color: rgba(255,255,255,0.35); color: var(–text); }
 .fmt-btn.selected { background: rgba(110,231,183,0.15); border-color: var(–accent); color: var(–accent); font-weight: 700; }
+.fmt-btn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
 
 .member-table { width: 100%; border-collapse: collapse; }
 .member-table th { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(–text-muted); text-align: left; padding: 8px 10px; border-bottom: 2px solid var(–accent); }
@@ -216,7 +217,7 @@ input[type=number] { text-align: center; flex: none; }
     <div class="card-title">大会形式</div>
     <div class="fmt-group" id="tourney-type">
       <button class="fmt-btn selected" data-v="rr">総当たり</button>
-      <button class="fmt-btn" data-v="random">ランダムマッチ</button>
+      <button class="fmt-btn" data-v="random" id="btn-random">ランダムマッチ</button>
     </div>
     <div class="card-title" style="margin-top:0.75rem">試合数の上限（任意）</div>
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:0.75rem">
@@ -475,6 +476,8 @@ function updateEst() {
       if (id === 'tier-filter') tierFilter   = this.dataset.v;
       if (id === 'match-type')  matchType    = this.dataset.v;
       if (id === 'tourney-type') tourneyType = this.dataset.v;
+      // シングルス選択時はランダムマッチを無効化
+      if (id === 'match-type') updateRandomAvailability();
       // 設定変更時に組み合わせを初期化
       matches = [];
       renderMatchList();
@@ -483,6 +486,24 @@ function updateEst() {
     });
   });
 });
+
+function updateRandomAvailability() {
+  const btn = document.getElementById('btn-random');
+  if (!btn) return;
+  if (matchType === 'singles') {
+    btn.disabled = true;
+    // ランダムが選択中だったら総当たりに戻す
+    if (tourneyType === 'random') {
+      tourneyType = 'rr';
+      document.querySelectorAll('#tourney-type .fmt-btn').forEach(x => x.classList.remove('selected'));
+      document.querySelector('#tourney-type .fmt-btn[data-v="rr"]').classList.add('selected');
+    }
+  } else {
+    btn.disabled = false;
+  }
+}
+// 初期状態を反映
+updateRandomAvailability();
 
 /* ── shuffle ── */
 function shuffle(arr) {
@@ -528,14 +549,12 @@ window.generateMatches = () => {
 function generateSingles(pool, limitPerPerson, limitTotal) {
   let candidates = [];
   const m = shuffle(pool);
-  if (tourneyType === 'rr') {
-    for (let i = 0; i < m.length; i++)
-      for (let j = i+1; j < m.length; j++) candidates.push({ p1:m[i], p2:m[j] });
-  } else {
-    for (let i = 0; i+1 < m.length; i+=2) candidates.push({ p1:m[i], p2:m[i+1] });
-  }
+  // 総当たりの全組み合わせを生成してシャッフル
+  for (let i = 0; i < m.length; i++)
+    for (let j = i+1; j < m.length; j++) candidates.push({ p1:m[i], p2:m[j] });
+  candidates = shuffle(candidates);
+  // 上限フィルター
   if (limitPerPerson > 0 || limitTotal > 0) {
-    candidates = shuffle(candidates);
     const pc = {}; pool.forEach(p => { pc[p]=0; });
     const filtered = [];
     for (const c of candidates) {
