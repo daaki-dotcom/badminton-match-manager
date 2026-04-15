@@ -66,7 +66,7 @@ input[type=number] { text-align: center; flex: none; }
 
 .member-table { width: 100%; border-collapse: collapse; }
 .member-table th { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(–text-muted); text-align: left; padding: 8px 10px; border-bottom: 2px solid var(–accent); }
-.member-table td { padding: 12px 10px; border-bottom: 2px solid var(–surface2); font-size: 14px; vertical-align: middle; }
+.member-table td { padding: 12px 8px; border-bottom: 1.5px solid #ffffff; font-size: 14px; vertical-align: middle; white-space: nowrap; }
 .member-table tr:last-child td { border-bottom: none; }
 .member-table tr:hover td { background: rgba(255,255,255,0.03); }
 .level-toggle { display: inline-flex; border-radius: 100px; overflow: hidden; border: 1px solid var(–border); background: var(–surface2); }
@@ -335,12 +335,12 @@ onValue(ref(db, ROOT), snap => {
   const data = snap.val() || {};
 
   if (data.members) {
-    members = Object.values(data.members);
+    members = Object.values(data.members).map(m => ({ ...m, level: m.level || 'nov' }));
   } else {
     const init = {};
-    NAMES.forEach((n, i) => { init[i] = { name: n, level: '' }; });
+    NAMES.forEach((n, i) => { init[i] = { name: n, level: 'nov' }; });
     fbSet('members', init);
-    members = NAMES.map(n => ({ name: n, level: '' }));
+    members = NAMES.map(n => ({ name: n, level: 'nov' }));
   }
 
   matches = data.matches ? Object.values(data.matches) : [];
@@ -386,7 +386,7 @@ window.addMember = () => {
   const inp  = document.getElementById('member-input');
   const name = inp.value.trim();
   if (!name || members.some(m => m.name === name)) { inp.focus(); return; }
-  members.push({ name, level: '' });
+  members.push({ name, level: 'nov' });
   inp.value = ''; inp.focus();
   const obj = {}; members.forEach((m, i) => { obj[i] = m; });
   fbSet('members', obj);
@@ -400,11 +400,7 @@ window.removeMember = i => {
   renderMembers();
 };
 
-window.setLevel = (i, level) => {
-  members[i].level = members[i].level === level ? '' : level;
-  fbUpdate(`members/${i}`, { level: members[i].level });
-  renderMembers();
-};
+
 
 function renderMembers() {
   const el  = document.getElementById('member-list');
@@ -709,7 +705,10 @@ function renderResults() {
     ${ranked.map((m,i) => `
     <div class="rank-row">
       <div class="rank-pos ${i<3?'top':''}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'位'}</div>
-      <div class="rank-name">${m}${wins[m].level==='exp'?'<span style="margin-left:6px" class="badge-exp">経験者</span>':wins[m].level==='nov'?'<span style="margin-left:6px" class="badge-nov">未経験者</span>':''}</div>
+      <div class="rank-name">
+        <div>${m}</div>
+        <div style="margin-top:3px">${wins[m].level==='exp'?'<span class="badge-exp">経験者</span>':wins[m].level==='nov'?'<span class="badge-nov">未経験者</span>':''}</div>
+      </div>
       <div class="rank-wl">${wins[m].w}勝${wins[m].l}敗${wins[m].d?wins[m].d+'分':''}</div>
       <div class="rank-pts">${wins[m].pts}<span style="font-size:11px;color:var(--text-muted)">pt</span></div>
     </div>`).join('')}
