@@ -269,7 +269,10 @@ input[type=number] { text-align: center; flex: none; }
     <div class="stat-card"><div class="stat-num" id="party-pending" style="color:var(--text-muted)">0</div><div class="stat-label">未回答</div></div>
   </div>
   <div class="card" style="padding-bottom:0.75rem">
-    <div class="card-title">懇親会参加確認</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid rgba(255,255,255,0.07)">
+      <div class="card-title" style="margin-bottom:0;padding-bottom:0;border-bottom:none">懇親会参加確認</div>
+      <button class="btn btn-sm" id="party-toggle-btn" onclick="togglePartyShowAll()">回答済みを表示</button>
+    </div>
     <table class="member-table" id="party-list"></table>
   </div>
 </div>
@@ -736,6 +739,15 @@ window.setParty = (i, val) => {
   renderPartyList();
 };
 
+let showPartyAll = false;
+
+window.togglePartyShowAll = () => {
+  showPartyAll = !showPartyAll;
+  const btn = document.getElementById('party-toggle-btn');
+  if (btn) btn.textContent = showPartyAll ? '未回答のみ表示' : '回答済みを表示';
+  renderPartyList();
+};
+
 function renderPartyList() {
   const el = document.getElementById('party-list');
   if (!el) return;
@@ -748,21 +760,22 @@ function renderPartyList() {
   if (yEl) yEl.textContent = yes;
   if (nEl) nEl.textContent = no;
   if (pEl) pEl.textContent = pending;
+
   if (!members.length) {
-    el.innerHTML = '<tr><td colspan="2" class="empty">メンバーを登録してください</td></tr>';
+    el.innerHTML = '<tr><td colspan="3" class="empty">メンバーを登録してください</td></tr>';
     return;
   }
-  // 未回答者のみ表示（回答済みは非表示）
-  const unanswered = members.filter(m => !m.party);
-  const allDone    = pending === 0;
 
-  if (allDone) {
+  const allDone = pending === 0;
+
+  // 表示対象：showPartyAll=true なら全員、false なら未回答のみ（全員回答済みなら集計表示）
+  if (allDone && !showPartyAll) {
     // 全員回答済み → 集計結果を表示
     const yesList = members.filter(m => m.party === 'yes').map(m => m.name);
     const noList  = members.filter(m => m.party === 'no' ).map(m => m.name);
     el.innerHTML = `
-      <tr><th colspan="2" style="text-align:center;padding:14px;color:var(--accent);font-size:13px;border-bottom:2px solid var(--accent)">🎉 全員回答完了！</th></tr>
-      <tr><td colspan="2" style="padding:12px 8px">
+      <tr><th colspan="3" style="text-align:center;padding:14px;color:var(--accent);font-size:13px;border-bottom:2px solid var(--accent)">🎉 全員回答完了！</th></tr>
+      <tr><td colspan="3" style="padding:12px 8px">
         <div style="margin-bottom:12px">
           <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:0.06em;margin-bottom:6px">参加 ${yesList.length}人</div>
           <div style="font-size:14px;line-height:2">${yesList.join('　') || '—'}</div>
@@ -775,20 +788,34 @@ function renderPartyList() {
           <button class="btn btn-sm btn-danger" onclick="resetParty()" style="width:100%">回答をリセット</button>
         </div>
       </td></tr>`;
-  } else {
-    // 未回答者のみ表示
-    el.innerHTML = '<tr><th>未回答</th><th>参加</th></tr>' +
-      unanswered.map(m => {
-        const i = members.indexOf(m);
-        return `<tr>
-          <td style="font-weight:500">${m.name}</td>
-          <td><div class="level-toggle">
-            <button class="level-btn exp" onclick="setParty(${i},'yes')">参加</button>
-            <button class="level-btn nov" onclick="setParty(${i},'no')">不参加</button>
-          </div></td>
-        </tr>`;
-      }).join('');
+    return;
   }
+
+  // 一覧表示（全員 or 未回答のみ）
+  const list = showPartyAll ? members : members.filter(m => !m.party);
+  el.innerHTML = `<tr>
+    <th>${showPartyAll ? '名前' : '未回答'}</th>
+    <th>参加</th>
+    ${showPartyAll ? '<th>状況</th>' : '<th></th>'}
+  </tr>` +
+    list.map(m => {
+      const i = members.indexOf(m);
+      const yActive = m.party === 'yes' ? ' active' : '';
+      const nActive = m.party === 'no'  ? ' active' : '';
+      const statusBadge = m.party === 'yes'
+        ? `<span class="badge-exp">参加</span>`
+        : m.party === 'no'
+        ? `<span style="background:rgba(248,113,113,0.13);color:var(--red);border:1px solid rgba(248,113,113,0.3);font-size:11px;padding:2px 9px;border-radius:100px;font-weight:700">不参加</span>`
+        : '';
+      return `<tr>
+        <td style="font-weight:500">${m.name}</td>
+        <td><div class="level-toggle">
+          <button class="level-btn exp${yActive}" onclick="setParty(${i},'yes')">参加</button>
+          <button class="level-btn nov${nActive}" onclick="setParty(${i},'no')">不参加</button>
+        </div></td>
+        ${showPartyAll ? `<td>${statusBadge}</td>` : '<td></td>'}
+      </tr>`;
+    }).join('');
 }
 
 window.resetParty = () => {
