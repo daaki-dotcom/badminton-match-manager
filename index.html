@@ -38,7 +38,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: va
 .section { display: none; }
 .section.active { display: block; }
 
-.card { background: var(–surface); border: 1.5px solid rgba(255,255,255,0.15); border-radius: var(–radius); padding: 1.25rem; margin-bottom: 1rem; }
+.card { background: var(–surface); border: 2px solid rgba(255,255,255,0.18); border-radius: var(–radius); padding: 1.25rem; margin-bottom: 1rem; }
 .card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(–text-muted); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
 
 .input-row { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -181,11 +181,11 @@ input[type=number] { text-align: center; flex: none; }
       <button id="member-toggle-btn" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1;padding:0 4px">▲</button>
     </div>
     <div id="member-list-wrap">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <button class="btn btn-sm" onclick="selectAllMembers()">全員選択</button>
-        <button class="btn btn-sm" onclick="deselectAllMembers()">選択解除</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteSelectedMembers()">選択削除</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteAllMembers()" style="margin-left:auto">全員削除</button>
+      <div style="display:flex;gap:8px;margin-bottom:10px;overflow-x:auto;padding-bottom:4px">
+        <button class="btn btn-sm" onclick="selectAllMembers()" style="white-space:nowrap">全員選択</button>
+        <button class="btn btn-sm" onclick="deselectAllMembers()" style="white-space:nowrap">選択解除</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteSelectedMembers()" style="white-space:nowrap">選択削除</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteAllMembers()" style="white-space:nowrap;margin-left:auto">全員削除</button>
       </div>
       <table class="member-table" id="member-list"></table>
     </div>
@@ -416,7 +416,7 @@ function renderMembers() {
   el.innerHTML = '<tr><th style="width:36px"><input type="checkbox" id="chk-all" onclick="toggleAllCheck(this.checked)" style="width:16px;height:16px;accent-color:var(--accent)"></th><th>名前</th><th>区分</th><th></th></tr>' +
     members.map((m, i) => `<tr>
       <td><input type="checkbox" class="member-chk" data-i="${i}" style="width:16px;height:16px;accent-color:var(--accent)"></td>
-      <td style="font-weight:500">${m.name}</td>
+      <td style="font-weight:500;white-space:nowrap">${m.name}</td>
       <td><div class="level-toggle">
         <button class="level-btn exp${m.level==='exp'?' active':''}" onclick="setLevel(${i},'exp')">経験者</button>
         <button class="level-btn nov${m.level==='nov'?' active':''}" onclick="setLevel(${i},'nov')">未経験者</button>
@@ -809,7 +809,7 @@ function renderPartyList() {
         ? `<span style="background:rgba(248,113,113,0.13);color:var(--red);border:1px solid rgba(248,113,113,0.3);font-size:11px;padding:2px 9px;border-radius:100px;font-weight:700">不参加</span>`
         : '';
       return `<tr>
-        <td style="font-weight:500">${m.name}</td>
+        <td style="font-weight:500;white-space:nowrap">${m.name}</td>
         <td><div class="level-toggle">
           <button class="level-btn exp${yActive}" onclick="setParty(${i},'yes')">参加</button>
           <button class="level-btn nov${nActive}" onclick="setParty(${i},'no')">不参加</button>
