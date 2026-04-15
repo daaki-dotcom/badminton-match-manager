@@ -19,7 +19,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: va
 .sync-bar { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(–accent); transform: scaleX(0); transform-origin: left; transition: transform 0.3s; z-index: 999; }
 .sync-bar.active { transform: scaleX(1); }
 
-.header { background: var(–surface); border-bottom: 1px solid var(–border); padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
+.header { background: var(–surface); border-bottom: 1px solid var(–border); padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; height: 56px; }
 .header-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
 .logo-icon { width: 28px; height: 28px; background: var(–accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
 .sync-status { font-size: 11px; color: var(–text-muted); display: flex; align-items: center; gap: 6px; }
@@ -29,7 +29,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: va
 .hstat { display: flex; flex-direction: column; align-items: center; font-size: 11px; color: var(–text-muted); }
 .hstat-num { font-family: ‘DM Mono’, monospace; font-size: 18px; font-weight: 500; color: var(–accent); line-height: 1.1; }
 
-.tabs { display: flex; background: var(–surface); border-bottom: 2px solid rgba(255,255,255,0.1); padding: 0 1rem; overflow-x: auto; gap: 4px; }
+.tabs { display: flex; background: var(–surface); border-bottom: 2px solid rgba(255,255,255,0.1); padding: 0 1rem; overflow-x: auto; gap: 4px; position: sticky; top: 0; z-index: 100; }
 .tab { padding: 14px 16px; font-size: 13px; font-weight: 500; color: var(–text-muted); cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: color 0.15s, border-color 0.15s; }
 .tab:hover { color: var(–text); }
 .tab.active { color: var(–accent); border-bottom-color: var(–accent); font-weight: 700; }
@@ -107,6 +107,12 @@ input[type=number] { text-align: center; flex: none; }
 
 .empty { text-align: center; color: var(–text-muted); padding: 2rem 0; font-size: 14px; }
 
+/* Toggle switch */
+.toggle-switch { width: 44px; height: 24px; border-radius: 12px; background: var(–surface2); border: 2px solid rgba(255,255,255,0.2); position: relative; cursor: pointer; transition: background 0.2s, border-color 0.2s; flex-shrink: 0; }
+.toggle-switch.on { background: var(–accent); border-color: var(–accent); }
+.toggle-knob { width: 16px; height: 16px; border-radius: 50%; background: rgba(255,255,255,0.5); position: absolute; top: 2px; left: 2px; transition: left 0.2s, background 0.2s; }
+.toggle-switch.on .toggle-knob { left: 22px; background: #0a1a12; }
+
 .loading { position: fixed; inset: 0; background: var(–bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 9999; }
 .loading-spinner { width: 36px; height: 36px; border: 3px solid var(–border); border-top-color: var(–accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -169,9 +175,9 @@ input[type=number] { text-align: center; flex: none; }
 
   <div class="card">
     <div class="card-title">メンバー登録</div>
-    <div class="input-row">
-      <input type="text" id="member-input" placeholder="名前を入力（Enterで追加）" onkeydown="if(event.key==='Enter')addMember()">
-      <button class="btn btn-accent" onclick="addMember()">追加</button>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="member-input" placeholder="名前を入力" onkeydown="if(event.key==='Enter')addMember()" style="flex:1;min-width:0">
+      <button class="btn btn-accent" onclick="addMember()" style="flex-shrink:0">追加</button>
     </div>
   </div>
 
@@ -181,11 +187,8 @@ input[type=number] { text-align: center; flex: none; }
       <button id="member-toggle-btn" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1;padding:0 4px">▲</button>
     </div>
     <div id="member-list-wrap">
-      <div style="display:flex;gap:8px;margin-bottom:10px;overflow-x:auto;padding-bottom:4px">
-        <button class="btn btn-sm" onclick="selectAllMembers()" style="white-space:nowrap">全員選択</button>
-        <button class="btn btn-sm" onclick="deselectAllMembers()" style="white-space:nowrap">選択解除</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteSelectedMembers()" style="white-space:nowrap">選択削除</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteAllMembers()" style="white-space:nowrap;margin-left:auto">全員削除</button>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-sm btn-danger" onclick="deleteSelectedMembers()" style="white-space:nowrap">削除</button>
       </div>
       <table class="member-table" id="member-list"></table>
     </div>
@@ -413,15 +416,21 @@ function renderMembers() {
     el.innerHTML = '<tr><td colspan="3" class="empty" style="padding:1rem 0">メンバーを追加してください</td></tr>';
     return;
   }
-  el.innerHTML = '<tr><th style="width:36px"><input type="checkbox" id="chk-all" onclick="toggleAllCheck(this.checked)" style="width:16px;height:16px;accent-color:var(--accent)"></th><th>名前</th><th>区分</th><th></th></tr>' +
+  el.style.tableLayout = 'fixed';
+  el.style.width = '100%';
+  el.innerHTML = '<colgroup><col style="width:36px"><col style="width:auto"><col style="width:110px"></colgroup>' +
+    '<tr><th style="width:36px"><input type="checkbox" id="chk-all" onclick="toggleAllCheck(this.checked)" style="width:16px;height:16px;accent-color:var(--accent)"></th><th>名前</th><th>区分</th></tr>' +
     members.map((m, i) => `<tr>
       <td><input type="checkbox" class="member-chk" data-i="${i}" style="width:16px;height:16px;accent-color:var(--accent)"></td>
-      <td style="font-weight:500;white-space:nowrap">${m.name}</td>
-      <td><div class="level-toggle">
-        <button class="level-btn exp${m.level==='exp'?' active':''}" onclick="setLevel(${i},'exp')">経験者</button>
-        <button class="level-btn nov${m.level==='nov'?' active':''}" onclick="setLevel(${i},'nov')">未経験者</button>
-      </div></td>
-      <td><button class="btn btn-sm btn-danger" onclick="removeMember(${i})">削除</button></td>
+      <td style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name}</td>
+      <td>
+        <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+          <div class="toggle-switch${m.level==='exp'?' on':''}" onclick="toggleLevel(${i})">
+            <div class="toggle-knob"></div>
+          </div>
+          <span style="font-size:12px;color:${m.level==='exp'?'var(--accent)':m.level==='nov'?'var(--blue)':'var(--text-muted)'}">${m.level==='exp'?'経験者':m.level==='nov'?'未経験者':'未設定'}</span>
+        </label>
+      </td>
     </tr>`).join('');
   renderPartyList();
 }
@@ -706,29 +715,23 @@ function renderResults() {
 window.toggleAllCheck = checked => {
   document.querySelectorAll('.member-chk').forEach(c => { c.checked = checked; });
 };
-window.selectAllMembers = () => {
-  document.querySelectorAll('.member-chk').forEach(c => { c.checked = true; });
-  const allChk = document.getElementById('chk-all');
-  if (allChk) allChk.checked = true;
-};
-window.deselectAllMembers = () => {
-  document.querySelectorAll('.member-chk').forEach(c => { c.checked = false; });
-  const allChk = document.getElementById('chk-all');
-  if (allChk) allChk.checked = false;
+window.toggleLevel = i => {
+  // オン→経験者、オフ→未経験者、未設定→経験者
+  if (members[i].level === 'exp') {
+    members[i].level = 'nov';
+  } else {
+    members[i].level = 'exp';
+  }
+  fbUpdate(`members/${i}`, { level: members[i].level });
+  renderMembers();
 };
 window.deleteSelectedMembers = () => {
   const selected = [...document.querySelectorAll('.member-chk:checked')].map(c => parseInt(c.dataset.i));
-  if (!selected.length) { alert('削除するメンバーを選択してください'); return; }
+  if (!selected.length) return; // チェックなしは何もしない
   if (!confirm(`選択した ${selected.length} 人を削除しますか？`)) return;
   members = members.filter((_, i) => !selected.includes(i));
   const obj = {}; members.forEach((m, i) => { obj[i] = m; });
   fbSet('members', obj);
-  renderMembers();
-};
-window.deleteAllMembers = () => {
-  if (!confirm(`全員（${members.length}人）を削除しますか？`)) return;
-  members = [];
-  fbSet('members', {});
   renderMembers();
 };
 
