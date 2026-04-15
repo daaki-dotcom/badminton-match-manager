@@ -38,7 +38,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: va
 .section { display: none; }
 .section.active { display: block; }
 
-.card { background: var(–surface); border: 1px solid rgba(255,255,255,0.1); border-radius: var(–radius); padding: 1.25rem; margin-bottom: 1rem; }
+.card { background: var(–surface); border: 1.5px solid rgba(255,255,255,0.15); border-radius: var(–radius); padding: 1.25rem; margin-bottom: 1rem; }
 .card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(–text-muted); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
 
 .input-row { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -76,9 +76,9 @@ input[type=number] { text-align: center; flex: none; }
 .badge-exp { background: rgba(110,231,183,0.13); color: var(–accent); border: 1px solid rgba(110,231,183,0.3); font-size: 11px; padding: 2px 9px; border-radius: 100px; font-weight: 700; }
 .badge-nov { background: rgba(96,165,250,0.13); color: var(–blue); border: 1px solid rgba(96,165,250,0.3); font-size: 11px; padding: 2px 9px; border-radius: 100px; font-weight: 700; }
 
-.match-item { background: var(–surface); border: 1px solid var(–border); border-radius: var(–radius-sm); padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; transition: border-color 0.15s; }
-.match-item.playing { border-color: var(–accent3); }
-.match-item.done { opacity: 0.7; }
+.match-item { background: var(–surface); border: 2px solid rgba(255,255,255,0.15); border-radius: var(–radius-sm); padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; transition: border-color 0.15s; }
+.match-item.playing { border-color: var(–accent3); border-width: 2px; }
+.match-item.done { opacity: 0.7; border-color: rgba(255,255,255,0.08); }
 .match-num { font-family: ‘DM Mono’, monospace; font-size: 11px; color: var(–text-muted); min-width: 38px; }
 .match-court { font-size: 11px; color: var(–accent3); min-width: 50px; }
 .match-player { flex: 1; font-size: 14px; font-weight: 500; text-align: center; min-width: 80px; }
@@ -91,7 +91,8 @@ input[type=number] { text-align: center; flex: none; }
 .badge-playing { background: rgba(251,191,36,0.15); color: var(–accent3); border: 1px solid rgba(251,191,36,0.3); }
 .badge-done { background: rgba(110,231,183,0.12); color: var(–accent); border: 1px solid rgba(110,231,183,0.3); }
 
-.rank-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(–border); }
+.rank-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.12); }
+.rank-row:first-child { border-top: 1px solid rgba(255,255,255,0.12); }
 .rank-row:last-child { border-bottom: none; }
 .rank-pos { font-family: ‘DM Mono’, monospace; font-size: 13px; font-weight: 500; min-width: 32px; color: var(–text-muted); }
 .rank-pos.top { color: var(–accent3); font-size: 16px; }
@@ -100,7 +101,7 @@ input[type=number] { text-align: center; flex: none; }
 .rank-pts { font-family: ‘DM Mono’, monospace; font-size: 16px; font-weight: 500; color: var(–accent); min-width: 50px; text-align: right; }
 
 .progress-wrap { margin: 8px 0 0; }
-.progress-bar-bg { height: 4px; background: var(–border); border-radius: 2px; overflow: hidden; }
+.progress-bar-bg { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); }
 .progress-bar-fill { height: 100%; background: var(–accent); border-radius: 2px; transition: width 0.4s ease; }
 .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(–text-muted); margin-top: 4px; }
 
