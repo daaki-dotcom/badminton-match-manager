@@ -64,14 +64,14 @@ input[type=number] { text-align: center; flex: none; }
 .fmt-btn.selected { background: rgba(110,231,183,0.12); border-color: var(–accent); color: var(–accent); }
 
 .member-table { width: 100%; border-collapse: collapse; }
-.member-table th { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(–text-muted); text-align: left; padding: 6px 10px; border-bottom: 1px solid var(–border); }
-.member-table td { padding: 8px 10px; border-bottom: 1px solid var(–border); font-size: 14px; vertical-align: middle; }
+.member-table th { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(–text-muted); text-align: left; padding: 8px 10px; border-bottom: 2px solid var(–accent); }
+.member-table td { padding: 12px 10px; border-bottom: 2px solid var(–surface2); font-size: 14px; vertical-align: middle; }
 .member-table tr:last-child td { border-bottom: none; }
-.member-table tr:hover td { background: var(–surface2); }
-.level-toggle { display: inline-flex; border-radius: 100px; overflow: hidden; border: 1px solid var(–border); }
-.level-btn { padding: 4px 12px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: none; color: var(–text-muted); transition: all 0.12s; font-family: ‘Noto Sans JP’, sans-serif; }
-.level-btn.exp.active { background: rgba(110,231,183,0.18); color: var(–accent); }
-.level-btn.nov.active { background: rgba(96,165,250,0.18); color: var(–blue); }
+.member-table tr:hover td { background: rgba(255,255,255,0.03); }
+.level-toggle { display: inline-flex; border-radius: 100px; overflow: hidden; border: 1px solid var(–border); background: var(–surface2); }
+.level-btn { padding: 6px 14px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: none; color: var(–text-muted); transition: all 0.12s; font-family: ‘Noto Sans JP’, sans-serif; }
+.level-btn.exp.active { background: var(–accent); color: #0a1a12; }
+.level-btn.nov.active { background: var(–blue); color: #0a1220; }
 .badge-exp { background: rgba(110,231,183,0.13); color: var(–accent); border: 1px solid rgba(110,231,183,0.3); font-size: 11px; padding: 2px 9px; border-radius: 100px; font-weight: 700; }
 .badge-nov { background: rgba(96,165,250,0.13); color: var(–blue); border: 1px solid rgba(96,165,250,0.3); font-size: 11px; padding: 2px 9px; border-radius: 100px; font-weight: 700; }
 
@@ -149,6 +149,7 @@ input[type=number] { text-align: center; flex: none; }
   <button class="tab active" onclick="showTab('members')">👥 メンバー</button>
   <button class="tab" onclick="showTab('matches')">🎯 組み合わせ</button>
   <button class="tab" onclick="showTab('results')">🏆 結果・順位</button>
+  <button class="tab" onclick="showTab('party')">🍻 懇親会</button>
 </nav>
 
 <main class="main">
@@ -178,6 +179,12 @@ input[type=number] { text-align: center; flex: none; }
       <button id="member-toggle-btn" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1;padding:0 4px">▲</button>
     </div>
     <div id="member-list-wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn btn-sm" onclick="selectAllMembers()">全員選択</button>
+        <button class="btn btn-sm" onclick="deselectAllMembers()">選択解除</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteSelectedMembers()">選択削除</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteAllMembers()" style="margin-left:auto">全員削除</button>
+      </div>
       <table class="member-table" id="member-list"></table>
     </div>
   </div>
@@ -252,6 +259,20 @@ input[type=number] { text-align: center; flex: none; }
   </div>
 </div>
 
+<!-- PARTY -->
+
+<div id="sec-party" class="section">
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="party-yes" style="color:var(--accent)">0</div><div class="stat-label">参加</div></div>
+    <div class="stat-card"><div class="stat-num" id="party-no" style="color:var(--red)">0</div><div class="stat-label">不参加</div></div>
+    <div class="stat-card"><div class="stat-num" id="party-pending" style="color:var(--text-muted)">0</div><div class="stat-label">未回答</div></div>
+  </div>
+  <div class="card" style="padding-bottom:0.75rem">
+    <div class="card-title">懇親会参加確認</div>
+    <table class="member-table" id="party-list"></table>
+  </div>
+</div>
+
 </main>
 
 <script type="module">
@@ -318,10 +339,18 @@ onValue(ref(db, ROOT), snap => {
   if (ci && parseInt(ci.value) !== courts) ci.value = courts;
   document.getElementById('cnt-courts').textContent = courts;
 
+  // party data
+  if (data.party) {
+    members.forEach((m, i) => {
+      m.party = data.party[i] ?? '';
+    });
+  }
+
   renderMembers();
   renderMatchList();
   updateHeaderStats();
   if (document.getElementById('sec-results').classList.contains('active')) renderResults();
+  if (document.getElementById('sec-party').classList.contains('active')) renderPartyList();
   document.getElementById('loading').style.display = 'none';
 });
 
@@ -334,10 +363,11 @@ onValue(ref(db, '.info/connected'), snap => {
 /* ── タブ ── */
 window.showTab = t => {
   document.querySelectorAll('.tab').forEach((el, i) =>
-    el.classList.toggle('active', ['members','matches','results'][i] === t));
+    el.classList.toggle('active', ['members','matches','results','party'][i] === t));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-' + t).classList.add('active');
   if (t === 'results') renderResults();
+  if (t === 'party')   renderPartyList();
 };
 
 /* ── メンバー ── */
@@ -378,8 +408,9 @@ function renderMembers() {
     el.innerHTML = '<tr><td colspan="3" class="empty" style="padding:1rem 0">メンバーを追加してください</td></tr>';
     return;
   }
-  el.innerHTML = '<tr><th>名前</th><th>区分</th><th></th></tr>' +
+  el.innerHTML = '<tr><th style="width:36px"><input type="checkbox" id="chk-all" onclick="toggleAllCheck(this.checked)" style="width:16px;height:16px;accent-color:var(--accent)"></th><th>名前</th><th>区分</th><th></th></tr>' +
     members.map((m, i) => `<tr>
+      <td><input type="checkbox" class="member-chk" data-i="${i}" style="width:16px;height:16px;accent-color:var(--accent)"></td>
       <td style="font-weight:500">${m.name}</td>
       <td><div class="level-toggle">
         <button class="level-btn exp${m.level==='exp'?' active':''}" onclick="setLevel(${i},'exp')">経験者</button>
@@ -387,6 +418,7 @@ function renderMembers() {
       </div></td>
       <td><button class="btn btn-sm btn-danger" onclick="removeMember(${i})">削除</button></td>
     </tr>`).join('');
+  renderPartyList();
 }
 
 /* ── コート数 ── */
@@ -663,6 +695,74 @@ function renderResults() {
   <div style="font-size:11px;color:var(--text-muted);text-align:center;padding:0.5rem 0">
     勝利 +2pt ／ 引き分け +1pt ／ 敗北 +0pt
   </div>`;
+}
+
+/* ── チェックボックス操作 ── */
+window.toggleAllCheck = checked => {
+  document.querySelectorAll('.member-chk').forEach(c => { c.checked = checked; });
+};
+window.selectAllMembers = () => {
+  document.querySelectorAll('.member-chk').forEach(c => { c.checked = true; });
+  const allChk = document.getElementById('chk-all');
+  if (allChk) allChk.checked = true;
+};
+window.deselectAllMembers = () => {
+  document.querySelectorAll('.member-chk').forEach(c => { c.checked = false; });
+  const allChk = document.getElementById('chk-all');
+  if (allChk) allChk.checked = false;
+};
+window.deleteSelectedMembers = () => {
+  const selected = [...document.querySelectorAll('.member-chk:checked')].map(c => parseInt(c.dataset.i));
+  if (!selected.length) { alert('削除するメンバーを選択してください'); return; }
+  if (!confirm(`選択した ${selected.length} 人を削除しますか？`)) return;
+  members = members.filter((_, i) => !selected.includes(i));
+  const obj = {}; members.forEach((m, i) => { obj[i] = m; });
+  fbSet('members', obj);
+  renderMembers();
+};
+window.deleteAllMembers = () => {
+  if (!confirm(`全員（${members.length}人）を削除しますか？`)) return;
+  members = [];
+  fbSet('members', {});
+  renderMembers();
+};
+
+/* ── 懇親会 ── */
+window.setParty = (i, val) => {
+  members[i].party = members[i].party === val ? '' : val;
+  const obj = {}; members.forEach((m, idx) => { obj[idx] = m.party || ''; });
+  fbSet('party', obj);
+  renderPartyList();
+};
+
+function renderPartyList() {
+  const el = document.getElementById('party-list');
+  if (!el) return;
+  const yes     = members.filter(m => m.party === 'yes').length;
+  const no      = members.filter(m => m.party === 'no').length;
+  const pending = members.length - yes - no;
+  const yEl = document.getElementById('party-yes');
+  const nEl = document.getElementById('party-no');
+  const pEl = document.getElementById('party-pending');
+  if (yEl) yEl.textContent = yes;
+  if (nEl) nEl.textContent = no;
+  if (pEl) pEl.textContent = pending;
+  if (!members.length) {
+    el.innerHTML = '<tr><td colspan="2" class="empty">メンバーを登録してください</td></tr>';
+    return;
+  }
+  el.innerHTML = '<tr><th>名前</th><th>参加</th></tr>' +
+    members.map((m, i) => {
+      const yActive = m.party === 'yes' ? ' active' : '';
+      const nActive = m.party === 'no'  ? ' active' : '';
+      return `<tr>
+        <td style="font-weight:500">${m.name}</td>
+        <td><div class="level-toggle">
+          <button class="level-btn exp${yActive}" onclick="setParty(${i},'yes')">参加</button>
+          <button class="level-btn nov${nActive}" onclick="setParty(${i},'no')">不参加</button>
+        </div></td>
+      </tr>`;
+    }).join('');
 }
 
 /* ── 折りたたみ ── */
