@@ -29,7 +29,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: va
 .hstat { display: flex; flex-direction: column; align-items: center; font-size: 11px; color: var(–text-muted); }
 .hstat-num { font-family: ‘DM Mono’, monospace; font-size: 18px; font-weight: 500; color: var(–accent); line-height: 1.1; }
 
-.tabs { display: flex; background: var(–surface); border-bottom: 2px solid rgba(255,255,255,0.1); padding: 0 1rem; overflow-x: auto; gap: 4px; position: sticky; top: 0; z-index: 100; }
+.tabs { display: flex; background: var(–surface); border-bottom: 2px solid rgba(255,255,255,0.2); padding: 0 1rem; overflow-x: auto; gap: 4px; position: sticky; top: 0; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
 .tab { padding: 14px 16px; font-size: 13px; font-weight: 500; color: var(–text-muted); cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: color 0.15s, border-color 0.15s; }
 .tab:hover { color: var(–text); }
 .tab.active { color: var(–accent); border-bottom-color: var(–accent); font-weight: 700; }
@@ -76,16 +76,19 @@ input[type=number] { text-align: center; flex: none; }
 .badge-exp { background: rgba(110,231,183,0.13); color: var(–accent); border: 1px solid rgba(110,231,183,0.3); font-size: 11px; padding: 2px 9px; border-radius: 100px; font-weight: 700; }
 .badge-nov { background: rgba(96,165,250,0.13); color: var(–blue); border: 1px solid rgba(96,165,250,0.3); font-size: 11px; padding: 2px 9px; border-radius: 100px; font-weight: 700; }
 
-.match-item { background: var(–surface); border: 2px solid rgba(255,255,255,0.15); border-radius: var(–radius-sm); padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; transition: border-color 0.15s; }
-.match-item.playing { border-color: var(–accent3); border-width: 2px; }
+.match-item { background: var(–surface); border: 2px solid rgba(255,255,255,0.15); border-radius: var(–radius-sm); padding: 12px 14px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; transition: border-color 0.15s; }
+.match-item.playing { border-color: var(–accent3); }
 .match-item.done { opacity: 0.7; border-color: rgba(255,255,255,0.08); }
-.match-num { font-family: ‘DM Mono’, monospace; font-size: 11px; color: var(–text-muted); min-width: 38px; }
-.match-court { font-size: 11px; color: var(–accent3); min-width: 50px; }
-.match-player { flex: 1; font-size: 14px; font-weight: 500; text-align: center; min-width: 80px; }
+.match-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.match-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.match-team { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.match-meta { font-size: 11px; color: var(–text-muted); font-family: ‘DM Mono’, monospace; }
 .match-score { display: flex; align-items: center; gap: 6px; }
-.match-score input { width: 52px; text-align: center; padding: 7px; font-family: ‘DM Mono’, monospace; font-size: 16px; font-weight: 500; }
-.vs { font-size: 11px; color: var(–text-muted); }
-.status-sel { padding: 6px 10px; background: var(–surface2); border: 1px solid var(–border); border-radius: var(–radius-sm); color: var(–text); font-size: 12px; font-family: ‘Noto Sans JP’, sans-serif; cursor: pointer; outline: none; }
+.match-score input { width: 56px; text-align: center; padding: 8px 4px; font-family: ‘DM Mono’, monospace; font-size: 22px; font-weight: 700; background: var(–surface2); border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; color: var(–text); outline: none; }
+.match-score input:focus { border-color: var(–accent); }
+.vs { font-size: 12px; color: var(–text-muted); }
+.match-status-row { display: flex; align-items: center; gap: 8px; }
+.status-sel { padding: 6px 10px; background: var(–surface2); border: 1.5px solid rgba(255,255,255,0.2); border-radius: var(–radius-sm); color: var(–text); font-size: 12px; font-family: ‘Noto Sans JP’, sans-serif; cursor: pointer; outline: none; }
 .badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px; letter-spacing: 0.04em; }
 .badge-wait { background: var(–surface2); color: var(–text-muted); }
 .badge-playing { background: rgba(251,191,36,0.15); color: var(–accent3); border: 1px solid rgba(251,191,36,0.3); }
@@ -425,10 +428,10 @@ function renderMembers() {
       <td style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name}</td>
       <td>
         <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-          <div class="toggle-switch${m.level==='exp'?' on':''}" onclick="toggleLevel(${i})">
+          <div class="toggle-switch${m.level==='exp'?' on':''}" onclick="toggleLevel(${i})" style="cursor:pointer">
             <div class="toggle-knob"></div>
           </div>
-          <span style="font-size:12px;color:${m.level==='exp'?'var(--accent)':m.level==='nov'?'var(--blue)':'var(--text-muted)'}">${m.level==='exp'?'経験者':m.level==='nov'?'未経験者':'未設定'}</span>
+          <span style="font-size:12px;color:${m.level==='exp'?'var(--accent)':'var(--blue)'}">${m.level==='exp'?'経験者':'未経験者'}</span>
         </label>
       </td>
     </tr>`).join('');
@@ -593,23 +596,28 @@ function renderMatchList() {
   if (!matches.length) { el.innerHTML = '<div class="empty">試合がありません</div>'; return; }
   el.innerHTML = matches.map((m, i) => `
   <div class="match-item ${m.status}" id="mi-${i}">
-    <span class="match-num">#${String(i+1).padStart(2,'0')}</span>
-    <span class="match-court">C${m.court}</span>
-    <span class="match-player">${m.p1}</span>
-    <div class="match-score">
-      <input type="number" min="0" max="99" value="${m.s1||''}" placeholder="0"
-        onchange="updateScore(${i},1,this.value)" style="width:52px">
-      <span class="vs">vs</span>
-      <input type="number" min="0" max="99" value="${m.s2||''}" placeholder="0"
-        onchange="updateScore(${i},2,this.value)" style="width:52px">
+    <div class="match-left">
+      <div class="match-team">${m.p1}</div>
+      <div class="match-meta">#${String(i+1).padStart(2,'0')}　C${m.court}</div>
+      <div class="match-team">${m.p2}</div>
     </div>
-    <span class="match-player">${m.p2}</span>
-    <select class="status-sel" onchange="updateStatus(${i},this.value)">
-      <option value="wait"    ${m.status==='wait'   ?'selected':''}>待機中</option>
-      <option value="playing" ${m.status==='playing'?'selected':''}>試合中</option>
-      <option value="done"    ${m.status==='done'   ?'selected':''}>終了</option>
-    </select>
-    <span class="badge badge-${m.status}">${m.status==='done'?'終了':m.status==='playing'?'試合中':'待機'}</span>
+    <div class="match-right">
+      <div class="match-score">
+        <input type="number" min="0" max="99" value="${m.s1||''}" placeholder="0"
+          onchange="updateScore(${i},1,this.value)">
+        <span class="vs">vs</span>
+        <input type="number" min="0" max="99" value="${m.s2||''}" placeholder="0"
+          onchange="updateScore(${i},2,this.value)">
+      </div>
+      <div class="match-status-row">
+        <select class="status-sel" onchange="updateStatus(${i},this.value)">
+          <option value="wait"    ${m.status==='wait'   ?'selected':''}>待機中</option>
+          <option value="playing" ${m.status==='playing'?'selected':''}>試合中</option>
+          <option value="done"    ${m.status==='done'   ?'selected':''}>終了</option>
+        </select>
+        <span class="badge badge-${m.status}">${m.status==='done'?'終了':m.status==='playing'?'試合中':'待機'}</span>
+      </div>
+    </div>
   </div>`).join('');
   updateHeaderStats();
 }
@@ -716,12 +724,8 @@ window.toggleAllCheck = checked => {
   document.querySelectorAll('.member-chk').forEach(c => { c.checked = checked; });
 };
 window.toggleLevel = i => {
-  // オン→経験者、オフ→未経験者、未設定→経験者
-  if (members[i].level === 'exp') {
-    members[i].level = 'nov';
-  } else {
-    members[i].level = 'exp';
-  }
+  // オン=経験者、オフ=未経験者（デフォルトはオフ=未経験者）
+  members[i].level = members[i].level === 'exp' ? 'nov' : 'exp';
   fbUpdate(`members/${i}`, { level: members[i].level });
   renderMembers();
 };
