@@ -110,37 +110,11 @@ input[type=number] { text-align: center; flex: none; }
 
 .empty { text-align: center; color: var(–text-muted); padding: 2rem 0; font-size: 14px; }
 
-/* Login */
-.login-overlay { position: fixed; inset: 0; background: var(–bg); display: flex; align-items: center; justify-content: center; z-index: 9998; padding: 1.5rem; }
-.login-card { background: var(–surface); border: 2px solid rgba(255,255,255,0.18); border-radius: var(–radius); padding: 2rem 1.5rem; width: 100%; max-width: 360px; }
-.login-title { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 0.5rem; }
-.login-sub { font-size: 13px; color: var(–text-muted); text-align: center; margin-bottom: 1.5rem; }
-.login-label { font-size: 12px; font-weight: 700; color: var(–text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; display: block; }
-.login-input { width: 100%; padding: 12px 14px; background: var(–surface2); border: 1.5px solid rgba(255,255,255,0.2); border-radius: var(–radius-sm); color: var(–text); font-size: 15px; font-family: ‘Noto Sans JP’, sans-serif; outline: none; margin-bottom: 1rem; }
-.login-input:focus { border-color: var(–accent); }
-.login-error { font-size: 13px; color: var(–red); text-align: center; margin-bottom: 1rem; min-height: 20px; }
-.login-btn { width: 100%; padding: 13px; background: var(–accent); color: #0a1a12; border: none; border-radius: var(–radius-sm); font-size: 15px; font-weight: 700; cursor: pointer; font-family: ‘Noto Sans JP’, sans-serif; margin-bottom: 0.75rem; }
-.login-btn:hover { opacity: 0.88; }
-.login-skip { width: 100%; padding: 11px; background: none; color: var(–text-muted); border: 1.5px solid rgba(255,255,255,0.18); border-radius: var(–radius-sm); font-size: 14px; cursor: pointer; font-family: ‘Noto Sans JP’, sans-serif; }
-.login-skip:hover { border-color: rgba(255,255,255,0.4); color: var(–text); }
-.role-badge { font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 100px; margin-left: 8px; }
-.role-admin { background: rgba(251,191,36,0.2); color: var(–accent3); border: 1px solid rgba(251,191,36,0.4); }
-.role-user  { background: rgba(255,255,255,0.08); color: var(–text-muted); border: 1px solid rgba(255,255,255,0.18); }
-/* 一般ユーザー：編集不可要素を無効化 */
-.readonly-mode .edit-only { display: none !important; }
-.readonly-mode input[type=number].score-input { pointer-events: none; opacity: 0.6; }
-.readonly-mode select.status-sel { pointer-events: none; opacity: 0.6; }
-
 /* Toggle switch */
 .toggle-switch { width: 44px; height: 24px; border-radius: 12px; background: var(–surface2); border: 2px solid rgba(255,255,255,0.2); position: relative; cursor: pointer; transition: background 0.2s, border-color 0.2s; flex-shrink: 0; }
 .toggle-switch.on { background: var(–accent); border-color: var(–accent); }
 .toggle-knob { width: 16px; height: 16px; border-radius: 50%; background: rgba(255,255,255,0.5); position: absolute; top: 2px; left: 2px; transition: left 0.2s, background 0.2s; }
 .toggle-switch.on .toggle-knob { left: 22px; background: #0a1a12; }
-
-.loading { position: fixed; inset: 0; background: var(–bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 9999; }
-.loading-spinner { width: 36px; height: 36px; border: 3px solid var(–border); border-top-color: var(–accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.loading-text { font-size: 14px; color: var(–text-muted); }
 
 @media (max-width: 600px) {
 .header-stats { display: none; }
@@ -154,27 +128,6 @@ input[type=number] { text-align: center; flex: none; }
 
 <div class="sync-bar" id="sync-bar"></div>
 
-<div class="loading" id="loading">
-  <div class="loading-spinner"></div>
-  <div class="loading-text">Firebaseに接続中...</div>
-</div>
-
-<!-- Login overlay -->
-
-<div class="login-overlay" id="login-overlay" style="display:none">
-  <div class="login-card">
-    <div class="login-title">🏸 バドミントン 試合管理</div>
-    <div class="login-sub">管理者の方はID/PWでログイン<br>一般の方はゲストで参加</div>
-    <label class="login-label">ID</label>
-    <input class="login-input" type="text" id="login-id" placeholder="管理者ID" autocomplete="off">
-    <label class="login-label">パスワード</label>
-    <input class="login-input" type="password" id="login-pw" placeholder="パスワード" onkeydown="if(event.key==='Enter')doLogin()">
-    <div class="login-error" id="login-error"></div>
-    <button class="login-btn" onclick="doLogin()">管理者ログイン</button>
-    <button class="login-skip" onclick="guestLogin()">ゲストとして参加（閲覧 + 懇親会のみ）</button>
-  </div>
-</div>
-
 <header class="header">
   <div class="header-logo">
     <div class="logo-icon">🏸</div>
@@ -184,7 +137,6 @@ input[type=number] { text-align: center; flex: none; }
     <div class="sync-status">
       <div class="sync-dot" id="sync-dot"></div>
       <span id="sync-label">接続中...</span>
-      <span id="role-badge" class="role-badge" style="display:none"></span>
     </div>
     <div class="header-stats">
       <div class="hstat"><div class="hstat-num" id="h-members">0</div>人</div>
@@ -214,7 +166,7 @@ input[type=number] { text-align: center; flex: none; }
     <div class="stat-card"><div class="stat-num" id="cnt-est">0</div><div class="stat-label">試合数（予定）</div></div>
   </div>
 
-  <div class="card edit-only">
+  <div class="card">
     <div class="card-title">メンバー登録</div>
     <div style="display:flex;gap:8px">
       <input type="text" id="member-input" placeholder="名前を入力" onkeydown="if(event.key==='Enter')addMember()" style="flex:1;min-width:0">
@@ -228,14 +180,14 @@ input[type=number] { text-align: center; flex: none; }
       <button id="member-toggle-btn" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1;padding:0 4px">▼</button>
     </div>
     <div id="member-list-wrap" style="display:none">
-      <div class="edit-only" style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
         <button class="btn btn-sm btn-danger" onclick="deleteSelectedMembers()" style="white-space:nowrap">削除</button>
       </div>
       <table class="member-table" id="member-list"></table>
     </div>
   </div>
 
-  <div class="card edit-only">
+  <div class="card">
     <div class="card-title">コート数</div>
     <div class="input-row" style="align-items:center;gap:10px">
       <input type="number" id="court-input" min="1" max="20" value="2"
@@ -280,7 +232,7 @@ input[type=number] { text-align: center; flex: none; }
       </div>
     </div>
     <div id="est-note" style="font-size:12px;color:var(--text-muted);margin-bottom:0.75rem"></div>
-    <button class="btn btn-accent edit-only" style="width:100%;margin-top:4px" onclick="generateMatches()">組み合わせを生成</button>
+    <button class="btn btn-accent" style="width:100%;margin-top:4px" onclick="generateMatches()">組み合わせを生成</button>
   </div>
 
   <div id="match-progress" style="display:none" class="card">
@@ -343,45 +295,6 @@ const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
 const ROOT = 'badminton';
 
-/* ── 認証 ── */
-const ADMIN = { id: 'taka32', pw: 'hane7721' };
-let currentRole = null; // 'admin' | 'guest'
-
-function doLogin() {
-  const id = document.getElementById('login-id').value.trim();
-  const pw = document.getElementById('login-pw').value;
-  const err = document.getElementById('login-error');
-  if (id === ADMIN.id && pw === ADMIN.pw) {
-    currentRole = 'admin';
-    applyRole();
-  } else {
-    err.textContent = 'IDまたはパスワードが違います';
-    document.getElementById('login-pw').value = '';
-  }
-}
-window.doLogin = doLogin;
-
-function guestLogin() {
-  currentRole = 'guest';
-  applyRole();
-}
-window.guestLogin = guestLogin;
-
-function applyRole() {
-  document.getElementById('login-overlay').style.display = 'none';
-  const badge = document.getElementById('role-badge');
-  badge.style.display = '';
-  if (currentRole === 'admin') {
-    badge.textContent = '管理者';
-    badge.className = 'role-badge role-admin';
-    document.body.classList.remove('readonly-mode');
-  } else {
-    badge.textContent = 'ゲスト';
-    badge.className = 'role-badge role-user';
-    document.body.classList.add('readonly-mode');
-  }
-}
-
 /* ── 状態 ── */
 const NAMES = ['安藤小雪','池田哲平','石崎奈々巴','和泉友伸','内田広大','海野桃香','大久保勇気','大野工輔','大橋裕樹','岡田徹','小山雄太郎','沓澤里空','後藤佑介','唐司明友梨','竹村仁','髙橋愛樹','高橋大生','谷本愛菜美','直井悠樹','長崎巧聖','南智也','西邑峻','浜田明彦','福井耀介','前川啓太','三澤凪彩','水口樹','宮村宏和','森えみ里','吉岡雅昭'];
 let members  = [];
@@ -440,10 +353,7 @@ onValue(ref(db, ROOT), snap => {
   updateHeaderStats();
   if (document.getElementById('sec-results').classList.contains('active')) renderResults();
   if (document.getElementById('sec-party').classList.contains('active')) renderPartyList();
-  document.getElementById('loading').style.display = 'none';
-  if (!currentRole) {
-    document.getElementById('login-overlay').style.display = 'flex';
-  }
+
 });
 
 onValue(ref(db, '.info/connected'), snap => {
@@ -716,13 +626,11 @@ function renderMatchList() {
 }
 
 window.updateScore = (i, side, v) => {
-  if (currentRole !== 'admin') return;
   if (side===1) matches[i].s1=v; else matches[i].s2=v;
   fbUpdate(`matches/${i}`, { s1:matches[i].s1, s2:matches[i].s2 });
 };
 
 window.updateStatus = (i, v) => {
-  if (currentRole !== 'admin') return;
   matches[i].status = v;
   fbUpdate(`matches/${i}`, { status: v });
   const el = document.getElementById('mi-'+i);
