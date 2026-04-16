@@ -873,10 +873,10 @@ function renderAttendance() {
 
 window.setAttendance = (i, val) => {
   members[i].attendance = members[i].attendance === val ? '' : val;
-  // 初回回答時にタイムスタンプをセット
-  const hasTs = members.some(m => m.attendance);
-  fbUpdate(`attendance/${i}`, members[i].attendance || '');
-  if (hasTs) fbSet('attendanceTimestamp', Date.now());
+  const obj = {}; members.forEach((m, idx) => { obj[idx] = m.attendance || ''; });
+  fbSet('attendance', obj);
+  const hasAny = members.some(m => m.attendance);
+  if (hasAny) fbSet('attendanceTimestamp', Date.now());
   renderAttendance();
 };
 
