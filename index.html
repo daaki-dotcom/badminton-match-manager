@@ -344,25 +344,29 @@ let courts   = 2;
 let matchType   = 'singles';
 let tourneyType = 'rr';
 let tierFilter  = 'all';
-let ignoreRemote = false;
+let writeCount = 0;
 
 /* ── Firebase helpers ── */
 function syncBar(on) { document.getElementById('sync-bar').classList.toggle('active', on); }
 
 async function fbSet(path, value) {
-  syncBar(true); ignoreRemote = true;
+  writeCount++;
+  syncBar(true);
   await set(ref(db, `${ROOT}/${path}`), value);
-  setTimeout(() => { ignoreRemote = false; syncBar(false); }, 500);
+  writeCount--;
+  if (writeCount === 0) syncBar(false);
 }
 async function fbUpdate(path, value) {
-  syncBar(true); ignoreRemote = true;
+  writeCount++;
+  syncBar(true);
   await update(ref(db, `${ROOT}/${path}`), value);
-  setTimeout(() => { ignoreRemote = false; syncBar(false); }, 500);
+  writeCount--;
+  if (writeCount === 0) syncBar(false);
 }
 
 /* ── リアルタイム受信 ── */
 onValue(ref(db, ROOT), snap => {
-  if (ignoreRemote) return;
+  if (writeCount > 0) return;
   const data = snap.val() || {};
 
   if (data.members) {
@@ -484,7 +488,6 @@ function renderMembers() {
         </label>
       </td>
     </tr>`).join('');
-  renderPartyList();
 }
 
 /* ── コート数 ── */
@@ -585,8 +588,6 @@ window.generateMatches = () => {
   // 全員最低1試合できるか確認
   const minMatches = matchType === 'singles' ? Math.ceil(pool.length / 2) : Math.ceil(pool.length / 4);
   const effectiveTotal = limitTotal > 0 ? limitTotal : 99999;
-  const effectivePerPerson = limitPerPerson > 0 ? limitPerPerson : 99999;
-  const minByPerson = matchType === 'singles' ? Math.ceil(pool.length / 2) : Math.ceil(pool.length / 4);
   if (effectiveTotal < minMatches) {
     const ok = confirm(`設定した試合数では全員が最低1試合できません。
 （必要最小試合数：${minMatches}試合）
