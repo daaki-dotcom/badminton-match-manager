@@ -161,7 +161,6 @@ input[type=number] { text-align: center; flex: none; }
   <button class="tab active" onclick="showTab('members')">👥 メンバー</button>
   <button class="tab" onclick="showTab('matches')">🎯 組み合わせ</button>
   <button class="tab" onclick="showTab('results')">🏆 結果・順位</button>
-  <button class="tab" onclick="showTab('attendance')">📋 出欠</button>
   <button class="tab" onclick="showTab('party')">🍻 懇親会</button>
 </nav>
 
@@ -272,32 +271,6 @@ input[type=number] { text-align: center; flex: none; }
   </div>
 </div>
 
-<!-- ATTENDANCE -->
-
-<div id="sec-attendance" class="section">
-  <div class="stats-grid">
-    <div class="stat-card"><div class="stat-num" id="att-yes" style="color:var(--accent)">0</div><div class="stat-label">参加</div></div>
-    <div class="stat-card"><div class="stat-num" id="att-no" style="color:var(--red)">0</div><div class="stat-label">不参加</div></div>
-    <div class="stat-card"><div class="stat-num" id="att-undecided" style="color:var(--accent3)">0</div><div class="stat-label">未定</div></div>
-    <div class="stat-card"><div class="stat-num" id="att-pending" style="color:var(--text-muted)">0</div><div class="stat-label">未回答</div></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">出欠確認</div>
-    <table class="member-table" id="attendance-list"></table>
-  </div>
-
-  <div class="card" id="att-result-card" style="display:none">
-    <div class="card-title">参加メンバー一覧</div>
-    <div id="att-result-text" style="font-size:14px;line-height:2;white-space:pre-wrap;word-break:break-all"></div>
-    <button class="btn btn-accent" style="width:100%;margin-top:1rem" onclick="copyAttendance()">テキストをコピー</button>
-  </div>
-
-  <div style="text-align:center;margin-top:0.5rem">
-    <button class="btn btn-sm btn-danger" onclick="resetAttendance()">出欠をリセット</button>
-  </div>
-</div>
-
 <!-- PARTY -->
 
 <div id="sec-party" class="section">
@@ -344,29 +317,25 @@ let courts   = 2;
 let matchType   = 'singles';
 let tourneyType = 'rr';
 let tierFilter  = 'all';
-let writeCount = 0;
+let ignoreRemote = false;
 
 /* ── Firebase helpers ── */
 function syncBar(on) { document.getElementById('sync-bar').classList.toggle('active', on); }
 
 async function fbSet(path, value) {
-  writeCount++;
-  syncBar(true);
+  syncBar(true); ignoreRemote = true;
   await set(ref(db, `${ROOT}/${path}`), value);
-  writeCount--;
-  if (writeCount === 0) syncBar(false);
+  setTimeout(() => { ignoreRemote = false; syncBar(false); }, 500);
 }
 async function fbUpdate(path, value) {
-  writeCount++;
-  syncBar(true);
+  syncBar(true); ignoreRemote = true;
   await update(ref(db, `${ROOT}/${path}`), value);
-  writeCount--;
-  if (writeCount === 0) syncBar(false);
+  setTimeout(() => { ignoreRemote = false; syncBar(false); }, 500);
 }
 
 /* ── リアルタイム受信 ── */
 onValue(ref(db, ROOT), snap => {
-  if (writeCount > 0) return;
+  if (ignoreRemote) return;
   const data = snap.val() || {};
 
   if (data.members) {
@@ -393,30 +362,12 @@ onValue(ref(db, ROOT), snap => {
     });
   }
 
-  // attendance data
-  if (data.attendance) {
-    members.forEach((m, i) => {
-      m.attendance = data.attendance[i] ?? '';
-    });
-    // 1週間経過で自動リセット
-    const ts = data.attendanceTimestamp || 0;
-    const oneWeek = 7 * 24 * 60 * 60 * 1000;
-    if (ts && Date.now() - ts > oneWeek) {
-      const obj = {}; members.forEach((_, i) => { obj[i] = ''; });
-      fbSet('attendance', obj);
-      fbSet('attendanceTimestamp', 0);
-      members.forEach(m => { m.attendance = ''; });
-    }
-  } else {
-    members.forEach(m => { m.attendance = ''; });
-  }
 
   renderMembers();
   renderMatchList();
   updateHeaderStats();
   if (document.getElementById('sec-results').classList.contains('active')) renderResults();
   if (document.getElementById('sec-party').classList.contains('active')) renderPartyList();
-  if (document.getElementById('sec-attendance').classList.contains('active')) renderAttendance();
   document.getElementById('loading').style.display = 'none';
 
 });
@@ -430,12 +381,11 @@ onValue(ref(db, '.info/connected'), snap => {
 /* ── タブ ── */
 window.showTab = t => {
   document.querySelectorAll('.tab').forEach((el, i) =>
-    el.classList.toggle('active', ['members','matches','results','attendance','party'][i] === t));
+    el.classList.toggle('active', ['members','matches','results','party'][i] === t));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-' + t).classList.add('active');
-  if (t === 'results')     renderResults();
-  if (t === 'attendance') renderAttendance();
-  if (t === 'party')       renderPartyList();
+  if (t === 'results') renderResults();
+  if (t === 'party')   renderPartyList();
 };
 
 /* ── メンバー ── */
@@ -488,6 +438,7 @@ function renderMembers() {
         </label>
       </td>
     </tr>`).join('');
+  renderPartyList();
 }
 
 /* ── コート数 ── */
@@ -588,6 +539,8 @@ window.generateMatches = () => {
   // 全員最低1試合できるか確認
   const minMatches = matchType === 'singles' ? Math.ceil(pool.length / 2) : Math.ceil(pool.length / 4);
   const effectiveTotal = limitTotal > 0 ? limitTotal : 99999;
+  const effectivePerPerson = limitPerPerson > 0 ? limitPerPerson : 99999;
+  const minByPerson = matchType === 'singles' ? Math.ceil(pool.length / 2) : Math.ceil(pool.length / 4);
   if (effectiveTotal < minMatches) {
     const ok = confirm(`設定した試合数では全員が最低1試合できません。
 （必要最小試合数：${minMatches}試合）
@@ -824,80 +777,6 @@ window.deleteSelectedMembers = () => {
   const obj = {}; members.forEach((m, i) => { obj[i] = m; });
   fbSet('members', obj);
   renderMembers();
-};
-
-/* ── 出欠確認 ── */
-function renderAttendance() {
-  const el = document.getElementById('attendance-list');
-  if (!el) return;
-  const yes       = members.filter(m => m.attendance === 'yes').length;
-  const no        = members.filter(m => m.attendance === 'no').length;
-  const undecided = members.filter(m => m.attendance === 'undecided').length;
-  const pending   = members.filter(m => !m.attendance || !['yes','no','undecided'].includes(m.attendance)).length;
-  document.getElementById('att-yes').textContent       = yes;
-  document.getElementById('att-no').textContent        = no;
-  document.getElementById('att-undecided').textContent = undecided;
-  document.getElementById('att-pending').textContent   = pending;
-
-  // 参加者テキスト出力カード
-  const resultCard = document.getElementById('att-result-card');
-  const yesList = members.filter(m => m.attendance === 'yes').map(m => m.name);
-  if (yesList.length > 0) {
-    resultCard.style.display = '';
-    document.getElementById('att-result-text').textContent = yesList.join('
-');
-  } else {
-    resultCard.style.display = 'none';
-  }
-
-  if (!members.length) {
-    el.innerHTML = '<tr><td colspan="2" class="empty">メンバーを登録してください</td></tr>';
-    return;
-  }
-  el.innerHTML = '<tr><th>名前</th><th>出欠</th></tr>' +
-    members.map((m, i) => {
-      const a = m.attendance || '';
-      const btnStyle = (val, color) =>
-        `padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ${a===val?color:'rgba(255,255,255,0.2)'};background:${a===val?color+'26':'var(--surface2)'};color:${a===val?color:'var(--text-muted)'};font-family:'Noto Sans JP',sans-serif`;
-      return `<tr style="border-bottom:1.5px solid rgba(255,255,255,0.08)">
-        <td style="font-weight:500;font-size:14px;padding:10px 8px">${m.name}</td>
-        <td style="padding:8px 4px">
-          <div style="display:flex;gap:4px;flex-wrap:wrap">
-            <button onclick="setAttendance(${i},'yes')" style="${btnStyle('yes','#6ee7b7')}">参加</button>
-            <button onclick="setAttendance(${i},'no')" style="${btnStyle('no','#f87171')}">不参加</button>
-            <button onclick="setAttendance(${i},'undecided')" style="${btnStyle('undecided','#fbbf24')}">未定</button>
-          </div>
-        </td>
-      </tr>`;
-    }).join('');
-}
-
-window.setAttendance = (i, val) => {
-  members[i].attendance = members[i].attendance === val ? '' : val;
-  const obj = {}; members.forEach((m, idx) => { obj[idx] = m.attendance || ''; });
-  fbSet('attendance', obj);
-  const hasAny = members.some(m => m.attendance);
-  if (hasAny) fbSet('attendanceTimestamp', Date.now());
-  renderAttendance();
-};
-
-window.resetAttendance = () => {
-  if (!confirm('出欠情報をリセットしますか？')) return;
-  members.forEach(m => { m.attendance = ''; });
-  const obj = {}; members.forEach((_, i) => { obj[i] = ''; });
-  fbSet('attendance', obj);
-  fbSet('attendanceTimestamp', 0);
-  renderAttendance();
-};
-
-window.copyAttendance = () => {
-  const text = members.filter(m => m.attendance === 'yes').map(m => m.name).join('
-');
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.querySelector('#att-result-card .btn-accent');
-    btn.textContent = 'コピーしました！';
-    setTimeout(() => { btn.textContent = 'テキストをコピー'; }, 2000);
-  });
 };
 
 /* ── 懇親会 ── */
