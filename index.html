@@ -42,9 +42,10 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: va
 .card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(–text-muted); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
 
 .input-row { display: flex; gap: 8px; margin-bottom: 8px; }
-input[type=text], input[type=number] { flex: 1; padding: 10px 12px; background: var(–surface2); border: 1px solid var(–border); border-radius: var(–radius-sm); color: var(–text); font-size: 14px; font-family: ‘Noto Sans JP’, sans-serif; outline: none; transition: border-color 0.15s; }
-input[type=text]:focus, input[type=number]:focus { border-color: var(–accent); }
+input[type=text], input[type=number], input[type=date] { flex: 1; padding: 10px 12px; background: var(–surface2); border: 1px solid var(–border); border-radius: var(–radius-sm); color: var(–text); font-size: 14px; font-family: ‘Noto Sans JP’, sans-serif; outline: none; transition: border-color 0.15s; }
+input[type=text]:focus, input[type=number]:focus, input[type=date]:focus { border-color: var(–accent); }
 input[type=number] { text-align: center; flex: none; }
+input[type=date] { color-scheme: dark; }
 
 .btn { padding: 10px 18px; border-radius: var(–radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid rgba(255,255,255,0.18); background: var(–surface2); color: var(–text); transition: all 0.15s; white-space: nowrap; font-family: ‘Noto Sans JP’, sans-serif; }
 .btn:hover { border-color: var(–accent); color: var(–accent); }
@@ -67,13 +68,15 @@ input[type=number] { text-align: center; flex: none; }
 
 .member-table { width: 100%; border-collapse: collapse; }
 .member-table th { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(–text-muted); text-align: left; padding: 8px 10px; border-bottom: 2px solid var(–accent); }
-.member-table td { padding: 12px 8px; border-bottom: 1.5px solid #ffffff; font-size: 14px; vertical-align: middle; white-space: nowrap; }
+.member-table td { padding: 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 14px; vertical-align: middle; }
 .member-table tr:last-child td { border-bottom: none; }
-.member-table tr:hover td { background: rgba(255,255,255,0.03); }
-.level-toggle { display: inline-flex; border-radius: 100px; overflow: hidden; border: 1px solid var(–border); background: var(–surface2); }
-.level-btn { padding: 6px 14px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: none; color: var(–text-muted); transition: all 0.12s; font-family: ‘Noto Sans JP’, sans-serif; }
-.level-btn.exp.active { background: var(–accent); color: #0a1a12; }
-.level-btn.nov.active { background: var(–blue); color: #0a1220; }
+.member-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.toggle-switch { width: 44px; height: 24px; border-radius: 12px; background: var(–surface2); border: 2px solid rgba(255,255,255,0.2); position: relative; cursor: pointer; transition: background 0.2s, border-color 0.2s; flex-shrink: 0; }
+.toggle-switch.on { background: var(–accent); border-color: var(–accent); }
+.toggle-knob { width: 16px; height: 16px; border-radius: 50%; background: rgba(255,255,255,0.5); position: absolute; top: 2px; left: 2px; transition: left 0.2s, background 0.2s; }
+.toggle-switch.on .toggle-knob { left: 22px; background: #0a1a12; }
+
 .badge-exp { background: rgba(110,231,183,0.13); color: var(–accent); border: 1px solid rgba(110,231,183,0.3); font-size: 11px; padding: 2px 9px; border-radius: 100px; font-weight: 700; }
 .badge-nov { background: rgba(96,165,250,0.13); color: var(–blue); border: 1px solid rgba(96,165,250,0.3); font-size: 11px; padding: 2px 9px; border-radius: 100px; font-weight: 700; }
 
@@ -95,8 +98,7 @@ input[type=number] { text-align: center; flex: none; }
 .badge-playing { background: rgba(251,191,36,0.15); color: var(–accent3); border: 1px solid rgba(251,191,36,0.3); }
 .badge-done { background: rgba(110,231,183,0.12); color: var(–accent); border: 1px solid rgba(110,231,183,0.3); }
 
-.rank-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.12); }
-.rank-row:first-child { border-top: 1px solid rgba(255,255,255,0.12); }
+.rank-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .rank-row:last-child { border-bottom: none; }
 .rank-pos { font-family: ‘DM Mono’, monospace; font-size: 13px; font-weight: 500; min-width: 32px; color: var(–text-muted); }
 .rank-pos.top { color: var(–accent3); font-size: 16px; }
@@ -111,21 +113,19 @@ input[type=number] { text-align: center; flex: none; }
 
 .empty { text-align: center; color: var(–text-muted); padding: 2rem 0; font-size: 14px; }
 
-/* Toggle switch */
-.toggle-switch { width: 44px; height: 24px; border-radius: 12px; background: var(–surface2); border: 2px solid rgba(255,255,255,0.2); position: relative; cursor: pointer; transition: background 0.2s, border-color 0.2s; flex-shrink: 0; }
-.toggle-switch.on { background: var(–accent); border-color: var(–accent); }
-.toggle-knob { width: 16px; height: 16px; border-radius: 50%; background: rgba(255,255,255,0.5); position: absolute; top: 2px; left: 2px; transition: left 0.2s, background 0.2s; }
-.toggle-switch.on .toggle-knob { left: 22px; background: #0a1a12; }
-
 .loading { position: fixed; inset: 0; background: var(–bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 9999; }
 .loading-spinner { width: 36px; height: 36px; border: 3px solid var(–border); border-top-color: var(–accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 14px; color: var(–text-muted); }
 
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9000; padding: 1.5rem; }
+.modal-card { background: var(–surface); border: 2px solid rgba(255,255,255,0.18); border-radius: var(–radius); padding: 1.5rem; width: 100%; max-width: 320px; }
+.modal-title { font-size: 15px; font-weight: 700; margin-bottom: 1rem; }
+.modal-error { font-size: 12px; color: var(–red); min-height: 18px; margin-bottom: 0.5rem; }
+
 @media (max-width: 600px) {
 .header-stats { display: none; }
 .main { padding: 1rem; }
-.match-item { gap: 6px; }
 }
 </style>
 
@@ -134,6 +134,30 @@ input[type=number] { text-align: center; flex: none; }
 
 <div class="sync-bar" id="sync-bar"></div>
 
+<!-- 活動日設定モーダル -->
+
+<div class="modal-overlay" id="date-modal" style="display:none" onclick="closeDateModal(event)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-title">🔒 活動日の変更</div>
+    <div style="margin-bottom:0.75rem">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">パスワード</label>
+      <input type="password" id="modal-pw" placeholder="パスワードを入力"
+        style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none"
+        onkeydown="if(event.key==='Enter')confirmDateModal()">
+    </div>
+    <div style="margin-bottom:0.75rem">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">活動日</label>
+      <input type="date" id="modal-date"
+        style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;color-scheme:dark"
+        onkeydown="if(event.key==='Enter')confirmDateModal()">
+    </div>
+    <div class="modal-error" id="modal-error"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1" onclick="closeDateModal()">キャンセル</button>
+      <button class="btn btn-accent" style="flex:1" onclick="confirmDateModal()">設定</button>
+    </div>
+  </div>
+</div>
 <div class="loading" id="loading">
   <div class="loading-spinner"></div>
   <div class="loading-text">接続中...</div>
@@ -150,7 +174,7 @@ input[type=number] { text-align: center; flex: none; }
       <span id="sync-label">接続中...</span>
     </div>
     <div class="header-stats">
-      <div class="hstat"><div class="hstat-num" id="h-members">0</div>人</div>
+      <div class="hstat"><div class="hstat-num" id="h-attend">0</div>参加</div>
       <div class="hstat"><div class="hstat-num" id="h-matches">0</div>試合</div>
       <div class="hstat"><div class="hstat-num" id="h-done">0</div>終了</div>
     </div>
@@ -158,7 +182,8 @@ input[type=number] { text-align: center; flex: none; }
 </header>
 
 <nav class="tabs">
-  <button class="tab active" onclick="showTab('members')">👥 メンバー</button>
+  <button class="tab active" onclick="showTab('attendance')">📋 出欠</button>
+  <button class="tab" onclick="showTab('members')">👥 メンバー</button>
   <button class="tab" onclick="showTab('matches')">🎯 組み合わせ</button>
   <button class="tab" onclick="showTab('results')">🏆 結果・順位</button>
   <button class="tab" onclick="showTab('party')">🍻 懇親会</button>
@@ -166,36 +191,57 @@ input[type=number] { text-align: center; flex: none; }
 
 <main class="main">
 
-<!-- MEMBERS -->
+<!-- ATTENDANCE -->
 
-<div id="sec-members" class="section active">
+<div id="sec-attendance" class="section active">
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-num" id="cnt-members">0</div><div class="stat-label">参加人数</div></div>
-    <div class="stat-card"><div class="stat-num" id="cnt-exp" style="color:var(--accent)">0</div><div class="stat-label">経験者</div></div>
-    <div class="stat-card"><div class="stat-num" id="cnt-nov" style="color:var(--blue)">0</div><div class="stat-label">未経験者</div></div>
-    <div class="stat-card"><div class="stat-num" id="cnt-courts">2</div><div class="stat-label">コート数</div></div>
-    <div class="stat-card"><div class="stat-num" id="cnt-est">0</div><div class="stat-label">試合数（予定）</div></div>
+    <div class="stat-card"><div class="stat-num" id="att-yes" style="color:var(--accent)">0</div><div class="stat-label">参加</div></div>
+    <div class="stat-card"><div class="stat-num" id="att-no" style="color:var(--red)">0</div><div class="stat-label">不参加</div></div>
+    <div class="stat-card"><div class="stat-num" id="att-undecided" style="color:var(--accent3)">0</div><div class="stat-label">未定</div></div>
   </div>
 
   <div class="card">
-    <div class="card-title">メンバー登録</div>
-    <div style="display:flex;gap:8px">
-      <input type="text" id="member-input" placeholder="名前を入力" onkeydown="if(event.key==='Enter')addMember()" style="flex:1;min-width:0">
-      <button class="btn btn-accent" onclick="addMember()" style="flex-shrink:0">追加</button>
+    <div class="card-title">活動日設定</div>
+    <div id="activity-date-display" style="font-size:13px;color:var(--text-muted);margin-bottom:0.75rem">活動日が設定されていません</div>
+    <button class="btn btn-accent" onclick="openDateModal()" style="width:100%">活動日を変更する</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">出欠入力</div>
+    <div class="input-row">
+      <input type="text" id="att-name-input" placeholder="名前を入力">
+    </div>
+    <div class="fmt-group" style="margin-bottom:0">
+      <button class="fmt-btn" onclick="submitAttendance('yes')" style="color:var(--accent);border-color:rgba(110,231,183,0.4)">参加</button>
+      <button class="fmt-btn" onclick="submitAttendance('no')" style="color:var(--red);border-color:rgba(248,113,113,0.4)">不参加</button>
+      <button class="fmt-btn" onclick="submitAttendance('undecided')" style="color:var(--accent3);border-color:rgba(251,191,36,0.4)">未定</button>
     </div>
   </div>
 
-  <div class="card" style="padding-bottom:0.75rem">
-    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding-bottom:0.75rem" onclick="toggleMemberList()">
-      <div class="card-title" style="margin-bottom:0">メンバー一覧 — 経験者 / 未経験者を設定</div>
-      <button id="member-toggle-btn" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1;padding:0 4px">▼</button>
-    </div>
-    <div id="member-list-wrap" style="display:none">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-        <button class="btn btn-sm btn-danger" onclick="deleteSelectedMembers()" style="white-space:nowrap">削除</button>
-      </div>
-      <table class="member-table" id="member-list"></table>
-    </div>
+  <div class="card" id="att-result-card" style="display:none">
+    <div class="card-title">参加メンバー一覧</div>
+    <div id="att-result-text" style="font-size:14px;line-height:2;white-space:pre-wrap"></div>
+    <button class="btn btn-accent" style="width:100%;margin-top:1rem" onclick="copyAttendance()">テキストをコピー</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">回答一覧</div>
+    <table class="member-table" id="attendance-list"></table>
+  </div>
+
+  <div style="text-align:center;margin-top:0.5rem">
+    <button class="btn btn-sm btn-danger" onclick="resetAttendance()">出欠をリセット</button>
+  </div>
+</div>
+
+<!-- MEMBERS -->
+
+<div id="sec-members" class="section">
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="cnt-members">0</div><div class="stat-label">今日の参加者</div></div>
+    <div class="stat-card"><div class="stat-num" id="cnt-exp" style="color:var(--accent)">0</div><div class="stat-label">経験者</div></div>
+    <div class="stat-card"><div class="stat-num" id="cnt-nov" style="color:var(--blue)">0</div><div class="stat-label">未経験者</div></div>
+    <div class="stat-card"><div class="stat-num" id="cnt-courts">2</div><div class="stat-label">コート数</div></div>
   </div>
 
   <div class="card">
@@ -206,6 +252,11 @@ input[type=number] { text-align: center; flex: none; }
         oninput="updateCourts(this.value)">
       <span style="font-size:13px;color:var(--text-muted)">コート</span>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">今日の参加者 — 経験者 / 未経験者を設定</div>
+    <table class="member-table" id="member-list"></table>
   </div>
 </div>
 
@@ -232,11 +283,7 @@ input[type=number] { text-align: center; flex: none; }
     <div class="card-title" style="margin-top:0.75rem">合計試合数の上限（任意）</div>
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:0.75rem">
       <!-- 1人あたり◯試合（将来実装）
-      <div style="display:flex;align-items:center;gap:8px">
-        <label style="font-size:13px;color:var(--text-muted);white-space:nowrap">1人あたり</label>
-        <input type="number" id="limit-per-person" min="1" max="99" placeholder="制限なし" style="width:110px" oninput="updateEst()">
-        <span style="font-size:13px;color:var(--text-muted)">試合</span>
-      </div>
+      <input type="number" id="limit-per-person" min="1" max="99" placeholder="1人あたり">
       -->
       <input type="number" id="limit-per-person" style="display:none">
       <div style="display:flex;align-items:center;gap:8px">
@@ -246,7 +293,8 @@ input[type=number] { text-align: center; flex: none; }
       </div>
     </div>
     <div id="est-note" style="font-size:12px;color:var(--text-muted);margin-bottom:0.75rem"></div>
-    <button class="btn btn-accent" style="width:100%;margin-top:4px" onclick="generateMatches()">組み合わせを生成</button>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:0.75rem">予定試合数：<span id="cnt-est" style="font-family:'DM Mono',monospace;font-size:16px;color:var(--accent)">0</span></div>
+    <button class="btn btn-accent" style="width:100%" onclick="generateMatches()">組み合わせを生成</button>
   </div>
 
   <div id="match-progress" style="display:none" class="card">
@@ -308,68 +356,87 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
 const ROOT = 'badminton';
+const ADMIN_PW = 'hane7721'; // 管理者パスワード（簡易制限）
 
-/* ── 状態 ── */
-const NAMES = ['安藤小雪','池田哲平','石崎奈々巴','和泉友伸','内田広大','海野桃香','大久保勇気','大野工輔','大橋裕樹','岡田徹','小山雄太郎','沓澤里空','後藤佑介','唐司明友梨','竹村仁','髙橋愛樹','高橋大生','谷本愛菜美','直井悠樹','長崎巧聖','南智也','西邑峻','浜田明彦','福井耀介','前川啓太','三澤凪彩','水口樹','宮村宏和','森えみ里','吉岡雅昭'];
-let members  = [];
-let matches  = [];
-let courts   = 2;
-let matchType   = 'singles';
-let tourneyType = 'rr';
-let tierFilter  = 'all';
-let ignoreRemote = false;
+/* ── 状態 ──
+  attendance: { [name]: 'yes'|'no'|'undecided' }  出欠データ
+  memberLevels: { [name]: 'exp'|'nov' }            経験者/未経験者
+  activityDate: 'YYYY-MM-DD'                       活動日
+  courts: number
+  matches: { [i]: matchObj }
+  party: { [name]: 'yes'|'no' }
+*/
+let attendance   = {};   // { name: 'yes'|'no'|'undecided' }
+let memberLevels = {};   // { name: 'exp'|'nov' }
+let matches      = [];
+let courts       = 2;
+let activityDate = '';
+let matchType    = 'singles';
+let tourneyType  = 'rr';
+let tierFilter   = 'all';
+let party        = {};   // { name: 'yes'|'no' }
+let writeCount   = 0;
 
 /* ── Firebase helpers ── */
 function syncBar(on) { document.getElementById('sync-bar').classList.toggle('active', on); }
 
 async function fbSet(path, value) {
-  syncBar(true); ignoreRemote = true;
+  writeCount++;
+  syncBar(true);
   await set(ref(db, `${ROOT}/${path}`), value);
-  setTimeout(() => { ignoreRemote = false; syncBar(false); }, 500);
+  writeCount--;
+  if (writeCount === 0) syncBar(false);
 }
 async function fbUpdate(path, value) {
-  syncBar(true); ignoreRemote = true;
+  writeCount++;
+  syncBar(true);
   await update(ref(db, `${ROOT}/${path}`), value);
-  setTimeout(() => { ignoreRemote = false; syncBar(false); }, 500);
+  writeCount--;
+  if (writeCount === 0) syncBar(false);
 }
 
 /* ── リアルタイム受信 ── */
 onValue(ref(db, ROOT), snap => {
-  if (ignoreRemote) return;
+  if (writeCount > 0) return;
   const data = snap.val() || {};
 
-  if (data.members) {
-    members = Object.values(data.members).map(m => ({ ...m, level: m.level || 'nov' }));
-  } else {
-    const init = {};
-    NAMES.forEach((n, i) => { init[i] = { name: n, level: 'nov' }; });
-    fbSet('members', init);
-    members = NAMES.map(n => ({ name: n, level: 'nov' }));
-  }
+  attendance   = data.attendance   || {};
+  memberLevels = data.memberLevels || {};
+  courts       = data.courts       ?? 2;
+  activityDate = data.activityDate || '';
+  party        = data.party        || {};
 
-  // matches はローカルのみ管理（タブを開くたびに初期化）
-  if (matches.length === 0) matches = [];
-  courts  = data.courts  ?? 2;
+  // matches
+  matches = data.matches ? Object.values(data.matches) : [];
+
+  // 活動日から1週間後に自動リセット
+  if (activityDate) {
+    const deadline = new Date(activityDate);
+    deadline.setDate(deadline.getDate() + 7);
+    if (new Date() > deadline) {
+      fbSet('attendance', {});
+      fbSet('activityDate', '');
+      fbSet('party', {});
+      attendance = {};
+      activityDate = '';
+      party = {};
+    }
+  }
 
   const ci = document.getElementById('court-input');
   if (ci && parseInt(ci.value) !== courts) ci.value = courts;
   document.getElementById('cnt-courts').textContent = courts;
 
-  // party data
-  if (data.party) {
-    members.forEach((m, i) => {
-      m.party = data.party[i] ?? '';
-    });
-  }
+  // 活動日表示
+  updateActivityDateDisplay();
 
-
+  renderAttendance();
   renderMembers();
   renderMatchList();
   updateHeaderStats();
   if (document.getElementById('sec-results').classList.contains('active')) renderResults();
   if (document.getElementById('sec-party').classList.contains('active')) renderPartyList();
   document.getElementById('loading').style.display = 'none';
-
 });
 
 onValue(ref(db, '.info/connected'), snap => {
@@ -381,65 +448,195 @@ onValue(ref(db, '.info/connected'), snap => {
 /* ── タブ ── */
 window.showTab = t => {
   document.querySelectorAll('.tab').forEach((el, i) =>
-    el.classList.toggle('active', ['members','matches','results','party'][i] === t));
+    el.classList.toggle('active', ['attendance','members','matches','results','party'][i] === t));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-' + t).classList.add('active');
   if (t === 'results') renderResults();
   if (t === 'party')   renderPartyList();
 };
 
-/* ── メンバー ── */
-window.addMember = () => {
-  const inp  = document.getElementById('member-input');
+/* ── ヘッダー更新 ── */
+function updateHeaderStats() {
+  const attendees = Object.keys(attendance).filter(n => attendance[n] === 'yes');
+  const done = matches.filter(m => m.status === 'done').length;
+  document.getElementById('h-attend').textContent  = attendees.length;
+  document.getElementById('h-matches').textContent = matches.length;
+  document.getElementById('h-done').textContent    = done;
+  document.getElementById('cnt-members').textContent = attendees.length;
+
+  const prog = document.getElementById('match-progress');
+  if (matches.length > 0) {
+    prog.style.display = 'block';
+    const pct = Math.round(done / matches.length * 100);
+    document.getElementById('prog-bar').style.width  = pct + '%';
+    document.getElementById('prog-text').textContent = `${done} / ${matches.length} 試合終了`;
+    document.getElementById('prog-pct').textContent  = pct + '%';
+  } else {
+    prog.style.display = 'none';
+  }
+}
+
+/* ── 活動日 ── */
+function updateActivityDateDisplay() {
+  const el = document.getElementById('activity-date-display');
+  if (activityDate) {
+    const d = new Date(activityDate);
+    const deadline = new Date(activityDate);
+    deadline.setDate(deadline.getDate() + 7);
+    el.textContent = `活動日: ${activityDate}　リセット予定: ${deadline.toLocaleDateString('ja-JP')}`;
+    el.style.color = 'var(--accent)';
+
+  } else {
+    el.textContent = '活動日が設定されていません';
+    el.style.color = 'var(--text-muted)';
+  }
+}
+
+window.openDateModal = () => {
+  const modal = document.getElementById('date-modal');
+  const dateInp = document.getElementById('modal-date');
+  document.getElementById('modal-pw').value = '';
+  document.getElementById('modal-error').textContent = '';
+  dateInp.value = activityDate || '';
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('modal-pw').focus(), 50);
+};
+
+window.closeDateModal = (e) => {
+  if (e && e.target !== document.getElementById('date-modal')) return;
+  document.getElementById('date-modal').style.display = 'none';
+};
+
+window.confirmDateModal = () => {
+  const pw  = document.getElementById('modal-pw').value;
+  const val = document.getElementById('modal-date').value;
+  const err = document.getElementById('modal-error');
+  if (pw !== ADMIN_PW) { err.textContent = 'パスワードが違います'; return; }
+  if (!val) { err.textContent = '活動日を選択してください'; return; }
+  activityDate = val;
+  fbSet('activityDate', val);
+  updateActivityDateDisplay();
+  document.getElementById('date-modal').style.display = 'none';
+};
+
+/* ── 出欠 ── */
+window.submitAttendance = val => {
+  const inp  = document.getElementById('att-name-input');
   const name = inp.value.trim();
-  if (!name || members.some(m => m.name === name)) { inp.focus(); return; }
-  members.push({ name, level: 'nov' });
-  inp.value = ''; inp.focus();
-  const obj = {}; members.forEach((m, i) => { obj[i] = m; });
-  fbSet('members', obj);
+  if (!name) { inp.focus(); return; }
+  attendance[name] = attendance[name] === val ? '' : val;
+  fbSet('attendance', attendance);
+  inp.value = '';
+  inp.focus();
+  renderAttendance();
   renderMembers();
+  updateHeaderStats();
 };
 
-window.removeMember = i => {
-  members.splice(i, 1);
-  const obj = {}; members.forEach((m, idx) => { obj[idx] = m; });
-  fbSet('members', obj);
+window.removeAttendance = name => {
+  delete attendance[name];
+  fbSet('attendance', attendance);
+  renderAttendance();
   renderMembers();
+  updateHeaderStats();
 };
 
+window.resetAttendance = () => {
+  if (!confirm('出欠情報をリセットしますか？')) return;
+  attendance = {};
+  party = {};
+  fbSet('attendance', {});
+  fbSet('party', {});
+  renderAttendance();
+  renderMembers();
+  updateHeaderStats();
+};
 
+window.copyAttendance = () => {
+  const text = Object.keys(attendance).filter(n => attendance[n] === 'yes').join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('#att-result-card .btn-accent');
+    btn.textContent = 'コピーしました！';
+    setTimeout(() => { btn.textContent = 'テキストをコピー'; }, 2000);
+  });
+};
+
+function renderAttendance() {
+  const yesList = Object.keys(attendance).filter(n => attendance[n] === 'yes');
+  const noList  = Object.keys(attendance).filter(n => attendance[n] === 'no');
+  const undList = Object.keys(attendance).filter(n => attendance[n] === 'undecided');
+
+  document.getElementById('att-yes').textContent       = yesList.length;
+  document.getElementById('att-no').textContent        = noList.length;
+  document.getElementById('att-undecided').textContent = undList.length;
+
+  // 参加者テキストカード
+  const resultCard = document.getElementById('att-result-card');
+  if (yesList.length > 0) {
+    resultCard.style.display = '';
+    document.getElementById('att-result-text').textContent = yesList.join('\n');
+  } else {
+    resultCard.style.display = 'none';
+  }
+
+  // 回答一覧
+  const el = document.getElementById('attendance-list');
+  const all = Object.keys(attendance).filter(n => attendance[n]);
+  if (!all.length) {
+    el.innerHTML = '<tr><td colspan="3" class="empty" style="padding:1rem 0">まだ回答がありません</td></tr>';
+    return;
+  }
+  const labelMap = { yes: '参加', no: '不参加', undecided: '未定' };
+  const colorMap = { yes: 'var(--accent)', no: 'var(--red)', undecided: 'var(--accent3)' };
+  el.innerHTML = '<tr><th>名前</th><th>回答</th><th></th></tr>' +
+    all.map(name => `
+    <tr>
+      <td style="font-weight:500">${name}</td>
+      <td><span style="font-size:12px;font-weight:700;color:${colorMap[attendance[name]]}">${labelMap[attendance[name]]}</span></td>
+      <td><button class="btn btn-sm btn-danger" onclick="removeAttendance('${name}')">削除</button></td>
+    </tr>`).join('');
+}
+
+/* ── メンバー（参加者一覧）── */
+function getAttendees() {
+  return Object.keys(attendance).filter(n => attendance[n] === 'yes');
+}
 
 function renderMembers() {
-  const el  = document.getElementById('member-list');
-  const exp = members.filter(m => m.level === 'exp').length;
-  const nov = members.filter(m => m.level === 'nov').length;
-  document.getElementById('cnt-members').textContent = members.length;
-  document.getElementById('h-members').textContent   = members.length;
+  const attendees = getAttendees();
+  const exp = attendees.filter(n => memberLevels[n] === 'exp').length;
+  const nov = attendees.filter(n => memberLevels[n] !== 'exp').length;
+  document.getElementById('cnt-members').textContent = attendees.length;
   document.getElementById('cnt-exp').textContent     = exp;
   document.getElementById('cnt-nov').textContent     = nov;
   updateEst();
-  if (!members.length) {
-    el.innerHTML = '<tr><td colspan="3" class="empty" style="padding:1rem 0">メンバーを追加してください</td></tr>';
+
+  const el = document.getElementById('member-list');
+  if (!attendees.length) {
+    el.innerHTML = '<tr><td colspan="2" class="empty" style="padding:1rem 0">出欠タブで「参加」と回答したメンバーが表示されます</td></tr>';
     return;
   }
-  el.style.tableLayout = 'fixed';
-  el.style.width = '100%';
-  el.innerHTML = '<colgroup><col style="width:36px"><col style="width:auto"><col style="width:110px"></colgroup>' +
-    '<tr><th style="width:36px"><input type="checkbox" id="chk-all" onclick="toggleAllCheck(this.checked)" style="width:16px;height:16px;accent-color:var(--accent)"></th><th>名前</th><th>区分</th></tr>' +
-    members.map((m, i) => `<tr>
-      <td><input type="checkbox" class="member-chk" data-i="${i}" style="width:16px;height:16px;accent-color:var(--accent)"></td>
-      <td style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name}</td>
+  el.innerHTML = '<tr><th>名前</th><th>区分</th></tr>' +
+    attendees.map(name => `<tr>
+      <td style="font-weight:500">${name}</td>
       <td>
         <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-          <div class="toggle-switch${m.level==='exp'?' on':''}" onclick="toggleLevel(${i})" style="cursor:pointer">
+          <div class="toggle-switch${memberLevels[name]==='exp'?' on':''}" onclick="toggleLevel('${name}')" style="cursor:pointer">
             <div class="toggle-knob"></div>
           </div>
-          <span style="font-size:12px;color:${m.level==='exp'?'var(--accent)':'var(--blue)'}">${m.level==='exp'?'経験者':'未経験者'}</span>
+          <span style="font-size:12px;color:${memberLevels[name]==='exp'?'var(--accent)':'var(--blue)'}">
+            ${memberLevels[name]==='exp'?'経験者':'未経験者'}
+          </span>
         </label>
       </td>
     </tr>`).join('');
-  renderPartyList();
 }
+
+window.toggleLevel = name => {
+  memberLevels[name] = memberLevels[name] === 'exp' ? 'nov' : 'exp';
+  fbUpdate('memberLevels', { [name]: memberLevels[name] });
+  renderMembers();
+};
 
 /* ── コート数 ── */
 window.updateCourts = v => {
@@ -452,33 +649,27 @@ window.updateCourts = v => {
 
 /* ── Pool / Est ── */
 function getPool() {
-  if (tierFilter === 'exp') return members.filter(m => m.level === 'exp').map(m => m.name);
-  if (tierFilter === 'nov') return members.filter(m => m.level === 'nov').map(m => m.name);
-  return members.map(m => m.name);
+  const attendees = getAttendees();
+  if (tierFilter === 'exp') return attendees.filter(n => memberLevels[n] === 'exp');
+  if (tierFilter === 'nov') return attendees.filter(n => memberLevels[n] !== 'exp');
+  return attendees;
 }
 
 function updateEst() {
   const pool = getPool(); const n = pool.length;
   let base = matchType === 'singles'
-    ? (tourneyType === 'rr' ? Math.floor(n*(n-1)/2) : Math.floor(n/2))
+    ? Math.floor(n*(n-1)/2)
     : Math.ceil(n/4);
-  const perP  = 0; // limit-per-person は将来実装
-  const total = parseInt(document.getElementById('limit-total')?.value)      || 0;
+  const total = parseInt(document.getElementById('limit-total')?.value) || 0;
   let cap = base;
-  if (perP  > 0) cap = Math.min(cap, matchType==='singles' ? Math.floor(n*perP/2) : Math.ceil(n*perP/4));
   if (total > 0) cap = Math.min(cap, total);
   document.getElementById('cnt-est').textContent = Math.max(0, cap);
   const note = document.getElementById('est-note');
   if (note) {
-    if (matchType === 'doubles') {
-      note.textContent = '全員が最低1試合できる最小試合数（上限設定で増減）';
-    } else {
-      const parts = [];
-      if (base !== cap) parts.push(`最大 ${base} 試合`);
-      if (perP  > 0) parts.push(`1人あたり上限 ${perP} 試合`);
-      if (total > 0) parts.push(`合計上限 ${total} 試合`);
-      note.textContent = parts.join('　／　');
-    }
+    const parts = [];
+    if (total > 0 && base !== cap) parts.push(`最大 ${base} 試合`);
+    if (total > 0) parts.push(`合計上限 ${total} 試合`);
+    note.textContent = parts.join('　／　');
   }
 }
 
@@ -488,12 +679,10 @@ function updateEst() {
     b.addEventListener('click', function() {
       document.querySelectorAll(`#${id} .fmt-btn`).forEach(x => x.classList.remove('selected'));
       this.classList.add('selected');
-      if (id === 'tier-filter') tierFilter   = this.dataset.v;
-      if (id === 'match-type')  matchType    = this.dataset.v;
-      if (id === 'tourney-type') tourneyType = this.dataset.v;
-      // シングルス選択時はランダムマッチを無効化
+      if (id === 'tier-filter')  tierFilter   = this.dataset.v;
+      if (id === 'match-type')   matchType    = this.dataset.v;
+      if (id === 'tourney-type') tourneyType  = this.dataset.v;
       if (id === 'match-type') updateRandomAvailability();
-      // 設定変更時に組み合わせを初期化
       matches = [];
       renderMatchList();
       updateHeaderStats();
@@ -507,7 +696,6 @@ function updateRandomAvailability() {
   if (!btn) return;
   if (matchType === 'singles') {
     btn.disabled = true;
-    // ランダムが選択中だったら総当たりに戻す
     if (tourneyType === 'random') {
       tourneyType = 'rr';
       document.querySelectorAll('#tourney-type .fmt-btn').forEach(x => x.classList.remove('selected'));
@@ -517,7 +705,6 @@ function updateRandomAvailability() {
     btn.disabled = false;
   }
 }
-// 初期状態を反映
 updateRandomAvailability();
 
 /* ── shuffle ── */
@@ -533,66 +720,41 @@ function shuffle(arr) {
 window.generateMatches = () => {
   const pool = getPool();
   if (pool.length < 2) { alert('対象メンバーが2人以上いません。'); return; }
-  const limitPerPerson = parseInt(document.getElementById('limit-per-person').value) || 0;
-  const limitTotal     = parseInt(document.getElementById('limit-total').value)      || 0;
-
-  // 全員最低1試合できるか確認
-  const minMatches = matchType === 'singles' ? Math.ceil(pool.length / 2) : Math.ceil(pool.length / 4);
-  const effectiveTotal = limitTotal > 0 ? limitTotal : 99999;
-  const effectivePerPerson = limitPerPerson > 0 ? limitPerPerson : 99999;
-  const minByPerson = matchType === 'singles' ? Math.ceil(pool.length / 2) : Math.ceil(pool.length / 4);
-  if (effectiveTotal < minMatches) {
-    const ok = confirm(`設定した試合数では全員が最低1試合できません。
-（必要最小試合数：${minMatches}試合）
-このまま続けますか？`);
-    if (!ok) return;
+  const limitTotal = parseInt(document.getElementById('limit-total').value) || 0;
+  const minMatches = matchType === 'singles' ? Math.ceil(pool.length/2) : Math.ceil(pool.length/4);
+  if (limitTotal > 0 && limitTotal < minMatches) {
+    if (!confirm(`設定した試合数では全員が最低1試合できません。\n（必要最小試合数：${minMatches}試合）\nこのまま続けますか？`)) return;
   }
-
   matchType === 'singles'
-    ? generateSingles(pool, limitPerPerson, limitTotal)
-    : generateDoubles(pool, limitPerPerson, limitTotal);
-
+    ? generateSingles(pool, limitTotal)
+    : generateDoubles(pool, limitTotal);
   let courtNum = 1;
   matches.forEach(mx => { mx.court = courtNum; courtNum = courtNum >= courts ? 1 : courtNum+1; });
-
   const obj = {}; matches.forEach((m, i) => { obj[i] = m; });
   fbSet('matches', obj);
   renderMatchList();
   updateHeaderStats();
 };
 
-function generateSingles(pool, limitPerPerson, limitTotal) {
-  let candidates = [];
+function generateSingles(pool, limitTotal) {
   const m = shuffle(pool);
-  // 総当たりの全組み合わせを生成してシャッフル
+  let candidates = [];
   for (let i = 0; i < m.length; i++)
     for (let j = i+1; j < m.length; j++) candidates.push({ p1:m[i], p2:m[j] });
   candidates = shuffle(candidates);
-  // 上限フィルター
-  if (limitPerPerson > 0 || limitTotal > 0) {
-    const pc = {}; pool.forEach(p => { pc[p]=0; });
-    const filtered = [];
-    for (const c of candidates) {
-      if (limitPerPerson > 0 && [c.p1,c.p2].some(p => (pc[p]||0) >= limitPerPerson)) continue;
-      if (limitTotal     > 0 && filtered.length >= limitTotal) break;
-      [c.p1,c.p2].forEach(p => { pc[p]=(pc[p]||0)+1; });
-      filtered.push(c);
-    }
-    candidates = filtered;
-  }
+  if (limitTotal > 0) candidates = candidates.slice(0, limitTotal);
   matches = candidates.map(c => ({ ...c, s1:'', s2:'', status:'wait', court:0 }));
 }
 
-function generateDoubles(pool, limitPerPerson, limitTotal) {
-  const maxGames     = limitTotal     > 0 ? limitTotal     : 99999;
-  const maxPerPerson = limitPerPerson > 0 ? limitPerPerson : 99999;
+function generateDoubles(pool, limitTotal) {
+  const maxGames = limitTotal > 0 ? limitTotal : 99999;
   const playCount = {}; pool.forEach(p => { playCount[p]=0; });
-  const pairHist  = {};
+  const pairHist = {};
   const pKey  = (a,b) => [a,b].sort().join('__');
   const gPair = (a,b) => pairHist[pKey(a,b)] || 0;
   const aPair = (a,b) => { const k=pKey(a,b); pairHist[k]=(pairHist[k]||0)+1; };
   const score = (t1,t2) => gPair(t1[0],t1[1]) + gPair(t2[0],t2[1]);
-  const best3 = (four) => {
+  const best3 = four => {
     const opts = [
       {t1:[four[0],four[1]], t2:[four[2],four[3]]},
       {t1:[four[0],four[2]], t2:[four[1],four[3]]},
@@ -601,28 +763,21 @@ function generateDoubles(pool, limitPerPerson, limitTotal) {
     opts.sort((a,b) => score(a.t1,a.t2) - score(b.t1,b.t2));
     return opts[0];
   };
-
   const generated = []; let failStreak = 0;
-
   while (generated.length < maxGames && failStreak < 30) {
-    const avail = shuffle(pool.filter(p => playCount[p] < maxPerPerson));
+    const avail = shuffle(pool).sort((a,b) => playCount[a]-playCount[b]);
     if (avail.length < 4) break;
-    avail.sort((a,b) => playCount[a]-playCount[b]);
-
     let best = best3(avail.slice(0,4));
     if (gPair(best.t1[0],best.t1[1]) > 0 || gPair(best.t2[0],best.t2[1]) > 0) {
       const wider = shuffle(avail.slice(0,Math.min(8,avail.length))).slice(0,4);
       best = best3(wider);
-      if (gPair(best.t1[0],best.t1[1]) > 0 || gPair(best.t2[0],best.t2[1]) > 0) {
-        failStreak++; continue;
-      }
+      if (gPair(best.t1[0],best.t1[1]) > 0 || gPair(best.t2[0],best.t2[1]) > 0) { failStreak++; continue; }
     }
     aPair(best.t1[0],best.t1[1]); aPair(best.t2[0],best.t2[1]);
     [...best.t1,...best.t2].forEach(p => playCount[p]++);
     generated.push({ p1:best.t1.join(' / '), p2:best.t2.join(' / '), s1:'', s2:'', status:'wait', court:0 });
     failStreak = 0;
   }
-
   if (!generated.length) { alert('条件を満たす組み合わせが見つかりませんでした。'); return; }
   matches = generated;
 }
@@ -640,11 +795,9 @@ function renderMatchList() {
     </div>
     <div class="match-right">
       <div class="match-score">
-        <input type="number" min="0" max="99" value="${m.s1||''}" placeholder="0"
-          onchange="updateScore(${i},1,this.value)" class="score-input">
+        <input type="number" min="0" max="99" value="${m.s1||''}" placeholder="0" onchange="updateScore(${i},1,this.value)">
         <span class="vs">vs</span>
-        <input type="number" min="0" max="99" value="${m.s2||''}" placeholder="0"
-          onchange="updateScore(${i},2,this.value)" class="score-input">
+        <input type="number" min="0" max="99" value="${m.s2||''}" placeholder="0" onchange="updateScore(${i},2,this.value)">
       </div>
       <div class="match-status-row">
         <select class="status-sel" onchange="updateStatus(${i},this.value)">
@@ -677,33 +830,17 @@ window.updateStatus = (i, v) => {
   updateHeaderStats();
 };
 
-function updateHeaderStats() {
-  const done    = matches.filter(m => m.status==='done').length;
-  const playing = matches.filter(m => m.status==='playing').length;
-  document.getElementById('h-matches').textContent = matches.length;
-  document.getElementById('h-done').textContent    = done;
-  const prog = document.getElementById('match-progress');
-  if (matches.length > 0) {
-    prog.style.display = 'block';
-    const pct = Math.round(done/matches.length*100);
-    document.getElementById('prog-bar').style.width  = pct+'%';
-    document.getElementById('prog-text').textContent = `${done} / ${matches.length} 試合終了`;
-    document.getElementById('prog-pct').textContent  = pct+'%';
-  } else {
-    prog.style.display = 'none';
-  }
-}
-
 /* ── 結果・順位 ── */
 function renderResults() {
+  const attendees = getAttendees();
   if (!matches.length) {
     document.getElementById('results-area').innerHTML = '<div class="empty">試合を組み合わせてから結果を入力してください</div>';
     return;
   }
   const wins = {};
-  members.forEach(m => { wins[m.name]={w:0,l:0,d:0,pts:0,pf:0,pa:0,level:m.level}; });
+  attendees.forEach(n => { wins[n] = { w:0, l:0, d:0, pts:0, pf:0, pa:0, level: memberLevels[n]||'nov' }; });
   matches.forEach(m => {
-    if (m.status!=='done') return;
+    if (m.status !== 'done') return;
     const s1=parseInt(m.s1)||0, s2=parseInt(m.s2)||0;
     const p1=m.p1.split(' / '), p2=m.p2.split(' / ');
     p1.forEach(p => { if(wins[p]){wins[p].pf+=s1;wins[p].pa+=s2;} });
@@ -719,9 +856,8 @@ function renderResults() {
       p2.forEach(p => { if(wins[p]){wins[p].d++;wins[p].pts++;} });
     }
   });
-  const ranked = members.map(m=>m.name).sort((a,b) =>
-    wins[b].pts-wins[a].pts || wins[b].w-wins[a].w ||
-    (wins[b].pf-wins[b].pa)-(wins[a].pf-wins[a].pa)
+  const ranked = attendees.slice().sort((a,b) =>
+    wins[b].pts-wins[a].pts || wins[b].w-wins[a].w || (wins[b].pf-wins[b].pa)-(wins[a].pf-wins[a].pa)
   );
   const done    = matches.filter(m=>m.status==='done').length;
   const playing = matches.filter(m=>m.status==='playing').length;
@@ -743,15 +879,15 @@ function renderResults() {
   </div>
   <div class="card">
     <div class="card-title">順位表</div>
-    ${ranked.map((m,i) => `
+    ${ranked.map((n,i) => `
     <div class="rank-row">
       <div class="rank-pos ${i<3?'top':''}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'位'}</div>
       <div class="rank-name">
-        <div>${m}</div>
-        <div style="margin-top:3px">${wins[m].level==='exp'?'<span class="badge-exp">経験者</span>':wins[m].level==='nov'?'<span class="badge-nov">未経験者</span>':''}</div>
+        <div>${n}</div>
+        <div style="margin-top:3px">${wins[n].level==='exp'?'<span class="badge-exp">経験者</span>':'<span class="badge-nov">未経験者</span>'}</div>
       </div>
-      <div class="rank-wl">${wins[m].w}勝${wins[m].l}敗${wins[m].d?wins[m].d+'分':''}</div>
-      <div class="rank-pts">${wins[m].pts}<span style="font-size:11px;color:var(--text-muted)">pt</span></div>
+      <div class="rank-wl">${wins[n].w}勝${wins[n].l}敗${wins[n].d?wins[n].d+'分':''}</div>
+      <div class="rank-pts">${wins[n].pts}<span style="font-size:11px;color:var(--text-muted)">pt</span></div>
     </div>`).join('')}
   </div>
   <div style="font-size:11px;color:var(--text-muted);text-align:center;padding:0.5rem 0">
@@ -759,36 +895,14 @@ function renderResults() {
   </div>`;
 }
 
-/* ── チェックボックス操作 ── */
-window.toggleAllCheck = checked => {
-  document.querySelectorAll('.member-chk').forEach(c => { c.checked = checked; });
-};
-window.toggleLevel = i => {
-  // オン=経験者、オフ=未経験者（デフォルトはオフ=未経験者）
-  members[i].level = members[i].level === 'exp' ? 'nov' : 'exp';
-  fbUpdate(`members/${i}`, { level: members[i].level });
-  renderMembers();
-};
-window.deleteSelectedMembers = () => {
-  const selected = [...document.querySelectorAll('.member-chk:checked')].map(c => parseInt(c.dataset.i));
-  if (!selected.length) return; // チェックなしは何もしない
-  if (!confirm(`選択した ${selected.length} 人を削除しますか？`)) return;
-  members = members.filter((_, i) => !selected.includes(i));
-  const obj = {}; members.forEach((m, i) => { obj[i] = m; });
-  fbSet('members', obj);
-  renderMembers();
-};
-
 /* ── 懇親会 ── */
-window.setParty = (i, val) => {
-  members[i].party = members[i].party === val ? '' : val;
-  const obj = {}; members.forEach((m, idx) => { obj[idx] = m.party || ''; });
-  fbSet('party', obj);
+window.setParty = (name, val) => {
+  party[name] = party[name] === val ? '' : val;
+  fbSet('party', party);
   renderPartyList();
 };
 
 let showPartyAll = false;
-
 window.togglePartyShowAll = () => {
   showPartyAll = !showPartyAll;
   const btn = document.getElementById('party-toggle-btn');
@@ -797,31 +911,32 @@ window.togglePartyShowAll = () => {
 };
 
 function renderPartyList() {
+  const attendees = getAttendees();
   const el = document.getElementById('party-list');
   if (!el) return;
-  const yes     = members.filter(m => m.party === 'yes').length;
-  const no      = members.filter(m => m.party === 'no').length;
-  const pending = members.filter(m => !m.party || (m.party !== 'yes' && m.party !== 'no')).length;
-  const yEl = document.getElementById('party-yes');
-  const nEl = document.getElementById('party-no');
-  const pEl = document.getElementById('party-pending');
-  if (yEl) yEl.textContent = yes;
-  if (nEl) nEl.textContent = no;
-  if (pEl) pEl.textContent = pending;
+  const yes     = attendees.filter(n => party[n] === 'yes').length;
+  const no      = attendees.filter(n => party[n] === 'no').length;
+  const pending = attendees.filter(n => !party[n] || (party[n] !== 'yes' && party[n] !== 'no')).length;
+  document.getElementById('party-yes').textContent     = yes;
+  document.getElementById('party-no').textContent      = no;
+  document.getElementById('party-pending').textContent = pending;
 
-  if (!members.length) {
-    el.innerHTML = '<tr><td colspan="2" class="empty">メンバーを登録してください</td></tr>';
+  if (!attendees.length) {
+    el.innerHTML = '<tr><td colspan="2" class="empty">出欠タブで参加者を登録してください</td></tr>';
     return;
   }
 
-  const answered   = members.filter(m => m.party === 'yes' || m.party === 'no');
-  const unanswered = members.filter(m => !m.party || (m.party !== 'yes' && m.party !== 'no'));
+  const answered   = attendees.filter(n => party[n] === 'yes' || party[n] === 'no');
+  const unanswered = attendees.filter(n => !party[n] || (party[n] !== 'yes' && party[n] !== 'no'));
   const allDone    = unanswered.length === 0;
 
-  // 全員回答済み かつ 回答済み表示モードでない → 集計表示
+  const btnHtml = (name) => `
+    <button onclick="setParty('${name}','yes')" style="padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ${party[name]==='yes'?'var(--accent)':'rgba(255,255,255,0.2)'};background:${party[name]==='yes'?'rgba(110,231,183,0.2)':'var(--surface2)'};color:${party[name]==='yes'?'var(--accent)':'var(--text-muted)'};font-family:'Noto Sans JP',sans-serif">参加</button>
+    <button onclick="setParty('${name}','no')" style="padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ${party[name]==='no'?'var(--red)':'rgba(255,255,255,0.2)'};background:${party[name]==='no'?'rgba(248,113,113,0.15)':'var(--surface2)'};color:${party[name]==='no'?'var(--red)':'var(--text-muted)'};font-family:'Noto Sans JP',sans-serif">不参加</button>`;
+
   if (allDone && !showPartyAll) {
-    const yesList = members.filter(m => m.party === 'yes').map(m => m.name);
-    const noList  = members.filter(m => m.party === 'no').map(m => m.name);
+    const yesList = attendees.filter(n => party[n] === 'yes');
+    const noList  = attendees.filter(n => party[n] === 'no');
     el.innerHTML = `
       <tr><th colspan="2" style="text-align:center;padding:14px;color:var(--accent);font-size:13px;border-bottom:2px solid var(--accent)">🎉 全員回答完了！</th></tr>
       <tr><td colspan="2" style="padding:12px 8px">
@@ -840,58 +955,31 @@ function renderPartyList() {
     return;
   }
 
-  // 回答済み表示モード：回答済みのみ表示
   if (showPartyAll) {
-    if (answered.length === 0) {
-      el.innerHTML = '<tr><td colspan="2" class="empty" style="padding:1.5rem 0">回答済みのメンバーがいません</td></tr>';
-      return;
-    }
-    el.innerHTML = '<tr><th>回答済み</th><th>参加</th></tr>' +
-      answered.map(m => {
-        const i = members.indexOf(m);
-        return `<tr style="display:flex;align-items:center;border-bottom:1.5px solid #ffffff;padding:8px 4px;gap:6px">
-          <td style="font-weight:500;white-space:nowrap;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;border:none;padding:0">${m.name}</td>
-          <td style="border:none;padding:0;display:flex;gap:4px;flex-shrink:0">
-            <button onclick="setParty(${i},'yes')" style="padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ${m.party==='yes'?'var(--accent)':'rgba(255,255,255,0.2)'};background:${m.party==='yes'?'rgba(110,231,183,0.2)':'var(--surface2)'};color:${m.party==='yes'?'var(--accent)':'var(--text-muted)'};font-family:'Noto Sans JP',sans-serif">参加</button>
-            <button onclick="setParty(${i},'no')" style="padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ${m.party==='no'?'var(--red)':'rgba(255,255,255,0.2)'};background:${m.party==='no'?'rgba(248,113,113,0.15)':'var(--surface2)'};color:${m.party==='no'?'var(--red)':'var(--text-muted)'};font-family:'Noto Sans JP',sans-serif">不参加</button>
-          </td>
-        </tr>`;
-      }).join('');
+    el.innerHTML = answered.length
+      ? '<tr><th>回答済み</th><th>参加</th></tr>' + answered.map(n => `
+        <tr style="display:flex;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06);padding:8px 4px;gap:6px">
+          <td style="font-weight:500;font-size:13px;flex:1;border:none;padding:0">${n}</td>
+          <td style="border:none;padding:0;display:flex;gap:4px;flex-shrink:0">${btnHtml(n)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="2" class="empty" style="padding:1.5rem 0">回答済みのメンバーがいません</td></tr>';
     return;
   }
 
-  // 通常モード：未回答のみ表示
-  if (unanswered.length === 0) {
-    el.innerHTML = '<tr><td colspan="2" class="empty" style="padding:1.5rem 0">未回答のメンバーがいません</td></tr>';
-    return;
-  }
-  el.innerHTML = '<tr><th>未回答</th><th>参加</th></tr>' +
-    unanswered.map(m => {
-      const i = members.indexOf(m);
-      return `<tr style="display:flex;align-items:center;border-bottom:1.5px solid #ffffff;padding:8px 4px;gap:6px">
-        <td style="font-weight:500;white-space:nowrap;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;border:none;padding:0">${m.name}</td>
-        <td style="border:none;padding:0;display:flex;gap:4px;flex-shrink:0">
-          <button onclick="setParty(${i},'yes')" style="padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ${m.party==='yes'?'var(--accent)':'rgba(255,255,255,0.2)'};background:${m.party==='yes'?'rgba(110,231,183,0.2)':'var(--surface2)'};color:${m.party==='yes'?'var(--accent)':'var(--text-muted)'};font-family:'Noto Sans JP',sans-serif">参加</button>
-          <button onclick="setParty(${i},'no')" style="padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ${m.party==='no'?'var(--red)':'rgba(255,255,255,0.2)'};background:${m.party==='no'?'rgba(248,113,113,0.15)':'var(--surface2)'};color:${m.party==='no'?'var(--red)':'var(--text-muted)'};font-family:'Noto Sans JP',sans-serif">不参加</button>
-        </td>
-      </tr>`;
-    }).join('');
+  el.innerHTML = unanswered.length
+    ? '<tr><th>未回答</th><th>参加</th></tr>' + unanswered.map(n => `
+      <tr style="display:flex;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06);padding:8px 4px;gap:6px">
+        <td style="font-weight:500;font-size:13px;flex:1;border:none;padding:0">${n}</td>
+        <td style="border:none;padding:0;display:flex;gap:4px;flex-shrink:0">${btnHtml(n)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="2" class="empty" style="padding:1.5rem 0">未回答のメンバーがいません</td></tr>';
 }
 
 window.resetParty = () => {
-  if (!confirm('全員の回答をリセットしますか？')) return;
-  members.forEach(m => { m.party = ''; });
-  const obj = {}; members.forEach((_, i) => { obj[i] = ''; });
-  fbSet('party', obj);
+  if (!confirm('懇親会の回答をリセットしますか？')) return;
+  party = {};
+  fbSet('party', {});
   renderPartyList();
-};
-
-/* ── 折りたたみ ── */
-let memberListOpen = false;
-window.toggleMemberList = () => {
-  memberListOpen = !memberListOpen;
-  document.getElementById('member-list-wrap').style.display = memberListOpen ? '' : 'none';
-  document.getElementById('member-toggle-btn').textContent  = memberListOpen ? '▲' : '▼';
 };
 </script>
 
