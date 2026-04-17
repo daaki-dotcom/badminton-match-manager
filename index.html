@@ -123,6 +123,20 @@ input[type=date] { color-scheme: dark; }
 .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 1rem; }
 .modal-error { font-size: 12px; color: var(–red); min-height: 18px; margin-bottom: 0.5rem; }
 
+.radio-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1rem; }
+.radio-row { display: flex; align-items: center; gap: 10px; }
+.radio-row input[type=radio] { width: 16px; height: 16px; accent-color: var(–accent); cursor: pointer; flex: none; }
+.radio-label { font-size: 13px; color: var(–text-muted); cursor: pointer; }
+.radio-row.active .radio-label { color: var(–text); font-weight: 500; }
+.limit-input-wrap { display: flex; align-items: center; gap: 8px; margin-left: 26px; }
+.limit-input-wrap input { width: 100px; }
+.limit-input-wrap input:disabled { opacity: 0.3; cursor: not-allowed; }
+.rule-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.rule-toggle-row:last-child { border-bottom: none; }
+.rule-toggle-label { font-size: 14px; font-weight: 500; }
+.rule-detail-btn { font-size: 11px; color: var(–text-muted); background: none; border: none; cursor: pointer; padding: 2px 6px; }
+.rule-detail { font-size: 12px; color: var(–text-muted); line-height: 1.7; padding: 8px 0 4px; display: none; }
+.rule-detail.open { display: block; }
 @media (max-width: 600px) {
 .header-stats { display: none; }
 .main { padding: 1rem; }
@@ -275,26 +289,70 @@ input[type=date] { color-scheme: dark; }
       <button class="fmt-btn selected" data-v="singles">シングルス</button>
       <button class="fmt-btn" data-v="doubles">ダブルス</button>
     </div>
-    <div class="card-title">大会形式</div>
-    <div class="fmt-group" id="tourney-type">
-      <button class="fmt-btn selected" data-v="rr">総当たり</button>
-      <button class="fmt-btn" data-v="random" id="btn-random">ランダムマッチ</button>
-    </div>
-    <div class="card-title" style="margin-top:0.75rem">合計試合数の上限（任意）</div>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:0.75rem">
-      <!-- 1人あたり◯試合（将来実装）
-      <input type="number" id="limit-per-person" min="1" max="99" placeholder="1人あたり">
-      -->
-      <input type="number" id="limit-per-person" style="display:none">
-      <div style="display:flex;align-items:center;gap:8px">
-        <label style="font-size:13px;color:var(--text-muted);white-space:nowrap">合計</label>
-        <input type="number" id="limit-total" min="1" max="9999" placeholder="制限なし" style="width:110px" oninput="updateEst()">
+
+```
+<!-- シングルス用試合数指定 -->
+<div id="singles-limit-section">
+  <div class="card-title" style="margin-top:0.75rem">試合数の指定</div>
+  <div class="radio-group">
+    <div>
+      <div class="radio-row active" id="radio-row-per">
+        <input type="radio" name="singles-mode" id="mode-per" value="per" checked onchange="onSinglesModeChange()">
+        <label class="radio-label" for="mode-per">1人あたりの試合数</label>
+      </div>
+      <div class="limit-input-wrap">
+        <input type="number" id="limit-per-person" min="1" max="99" placeholder="例: 3" oninput="updateEst()">
         <span style="font-size:13px;color:var(--text-muted)">試合</span>
       </div>
     </div>
-    <div id="est-note" style="font-size:12px;color:var(--text-muted);margin-bottom:0.75rem"></div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:0.75rem">予定試合数：<span id="cnt-est" style="font-family:'DM Mono',monospace;font-size:16px;color:var(--accent)">0</span></div>
-    <button class="btn btn-accent" style="width:100%" onclick="generateMatches()">組み合わせを生成</button>
+    <div>
+      <div class="radio-row" id="radio-row-total">
+        <input type="radio" name="singles-mode" id="mode-total" value="total" onchange="onSinglesModeChange()">
+        <label class="radio-label" for="mode-total">合計試合数の上限</label>
+      </div>
+      <div class="limit-input-wrap">
+        <input type="number" id="limit-total-singles" min="1" max="9999" placeholder="例: 10" disabled oninput="updateEst()">
+        <span style="font-size:13px;color:var(--text-muted)">試合</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ダブルス用試合数指定 -->
+<div id="doubles-limit-section" style="display:none">
+  <div class="card-title" style="margin-top:0.75rem">合計試合数の上限（任意）</div>
+  <div class="limit-input-wrap" style="margin-left:0;margin-bottom:0.75rem">
+    <input type="number" id="limit-total-doubles" min="1" max="9999" placeholder="制限なし" oninput="updateEst()">
+    <span style="font-size:13px;color:var(--text-muted)">試合</span>
+  </div>
+</div>
+
+<!-- 共通ルール設定 -->
+<div class="card-title" style="margin-top:0.75rem">ルール設定</div>
+<div style="margin-bottom:1rem">
+  <div class="rule-toggle-row">
+    <div>
+      <div class="rule-toggle-label">均等にする</div>
+      <button class="rule-detail-btn" onclick="toggleRuleDetail('detail-equal')">▶ 説明</button>
+      <div class="rule-detail" id="detail-equal">全員の試合数が同じになるように生成します。均等にできない試合数が指定された場合は警告を表示します。</div>
+    </div>
+    <div class="toggle-switch on" id="toggle-equal" onclick="toggleRule('equal')"><div class="toggle-knob"></div></div>
+  </div>
+  <div class="rule-toggle-row">
+    <div>
+      <div class="rule-toggle-label">連続不可にする</div>
+      <button class="rule-detail-btn" onclick="toggleRuleDetail('detail-consec')">▶ 説明</button>
+      <div class="rule-detail" id="detail-consec">同じ人が連続して試合しないように生成します。同一ラウンド内および次のラウンドも対象です。コート数に対して人数がちょうどの場合は自動的に緩和されます。</div>
+    </div>
+    <div class="toggle-switch on" id="toggle-consec" onclick="toggleRule('consec')"><div class="toggle-knob"></div></div>
+  </div>
+</div>
+
+<div id="est-note" style="font-size:12px;color:var(--text-muted);margin-bottom:0.75rem"></div>
+<div style="font-size:12px;color:var(--text-muted);margin-bottom:0.75rem">予定試合数：<span id="cnt-est" style="font-family:'DM Mono',monospace;font-size:16px;color:var(--accent)">0</span></div>
+<button class="btn btn-accent" style="width:100%" onclick="generateMatches()">組み合わせを生成</button>
+```
+
   </div>
 
   <div id="match-progress" style="display:none" class="card">
@@ -372,6 +430,8 @@ let matches      = [];
 let courts       = 2;
 let activityDate = '';
 let matchType    = 'singles';
+let ruleEqual  = true;
+let ruleConsec = true;
 let tourneyType  = 'rr';
 let tierFilter   = 'all';
 let party        = {};   // { name: 'yes'|'no' }
@@ -657,32 +717,41 @@ function getPool() {
 
 function updateEst() {
   const pool = getPool(); const n = pool.length;
-  let base = matchType === 'singles'
-    ? Math.floor(n*(n-1)/2)
-    : Math.ceil(n/4);
-  const total = parseInt(document.getElementById('limit-total')?.value) || 0;
-  let cap = base;
-  if (total > 0) cap = Math.min(cap, total);
-  document.getElementById('cnt-est').textContent = Math.max(0, cap);
+  let cap = 0;
   const note = document.getElementById('est-note');
-  if (note) {
-    const parts = [];
-    if (total > 0 && base !== cap) parts.push(`最大 ${base} 試合`);
-    if (total > 0) parts.push(`合計上限 ${total} 試合`);
-    note.textContent = parts.join('　／　');
+  if (matchType === 'singles') {
+    const isPerMode = document.getElementById('mode-per').checked;
+    if (isPerMode) {
+      const perP = parseInt(document.getElementById('limit-per-person').value) || 0;
+      cap = perP > 0 ? Math.floor(n * perP / 2) : Math.floor(n*(n-1)/2);
+      if (note) note.textContent = perP > 0 ? `1人あたり ${perP} 試合` : '';
+    } else {
+      const total = parseInt(document.getElementById('limit-total-singles').value) || 0;
+      cap = total > 0 ? Math.min(total, Math.floor(n*(n-1)/2)) : Math.floor(n*(n-1)/2);
+      if (note) note.textContent = total > 0 ? `合計上限 ${total} 試合` : '';
+    }
+  } else {
+    const total = parseInt(document.getElementById('limit-total-doubles').value) || 0;
+    if (note) note.textContent = total > 0 ? `合計上限 ${total} 試合` : '';
+    if (total > 0) {
+      cap = total;
+    } else {
+      document.getElementById('cnt-est').textContent = '—';
+      return;
+    }
   }
+  document.getElementById('cnt-est').textContent = Math.max(0, cap);
 }
 
 /* ── fmt buttons ── */
-['tier-filter','match-type','tourney-type'].forEach(id => {
+['tier-filter','match-type'].forEach(id => {
   document.getElementById(id).querySelectorAll('.fmt-btn').forEach(b => {
     b.addEventListener('click', function() {
       document.querySelectorAll(`#${id} .fmt-btn`).forEach(x => x.classList.remove('selected'));
       this.classList.add('selected');
-      if (id === 'tier-filter')  tierFilter   = this.dataset.v;
-      if (id === 'match-type')   matchType    = this.dataset.v;
-      if (id === 'tourney-type') tourneyType  = this.dataset.v;
-      if (id === 'match-type') updateRandomAvailability();
+      if (id === 'tier-filter') tierFilter = this.dataset.v;
+      if (id === 'match-type')  matchType  = this.dataset.v;
+      if (id === 'match-type')  updateMatchTypeUI();
       matches = [];
       renderMatchList();
       updateHeaderStats();
@@ -691,21 +760,33 @@ function updateEst() {
   });
 });
 
-function updateRandomAvailability() {
-  const btn = document.getElementById('btn-random');
-  if (!btn) return;
-  if (matchType === 'singles') {
-    btn.disabled = true;
-    if (tourneyType === 'random') {
-      tourneyType = 'rr';
-      document.querySelectorAll('#tourney-type .fmt-btn').forEach(x => x.classList.remove('selected'));
-      document.querySelector('#tourney-type .fmt-btn[data-v="rr"]').classList.add('selected');
-    }
-  } else {
-    btn.disabled = false;
-  }
+function updateMatchTypeUI() {
+  const isSingles = matchType === 'singles';
+  document.getElementById('singles-limit-section').style.display = isSingles ? '' : 'none';
+  document.getElementById('doubles-limit-section').style.display = isSingles ? 'none' : '';
 }
-updateRandomAvailability();
+
+window.onSinglesModeChange = () => {
+  const isPerMode = document.getElementById('mode-per').checked;
+  document.getElementById('limit-per-person').disabled      = !isPerMode;
+  document.getElementById('limit-total-singles').disabled   = isPerMode;
+  document.getElementById('radio-row-per').classList.toggle('active', isPerMode);
+  document.getElementById('radio-row-total').classList.toggle('active', !isPerMode);
+  updateEst();
+};
+
+window.toggleRule = key => {
+  if (key === 'equal')  ruleEqual  = !ruleEqual;
+  if (key === 'consec') ruleConsec = !ruleConsec;
+  document.getElementById(`toggle-${key}`).classList.toggle('on', key === 'equal' ? ruleEqual : ruleConsec);
+};
+
+window.toggleRuleDetail = id => {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+  const btn = el.previousElementSibling;
+  btn.textContent = el.classList.contains('open') ? '▼ 説明' : '▶ 説明';
+};
 
 /* ── shuffle ── */
 function shuffle(arr) {
@@ -716,70 +797,243 @@ function shuffle(arr) {
   return a;
 }
 
+/* ── 連続不可の緩和判定 ── */
+function shouldRelaxConsec() {
+  const pool = getPool();
+  const perMatch = matchType === 'singles' ? 2 : 4;
+  return pool.length === courts * perMatch;
+}
+
 /* ── 生成 ── */
 window.generateMatches = () => {
   const pool = getPool();
   if (pool.length < 2) { alert('対象メンバーが2人以上いません。'); return; }
-  const limitTotal = parseInt(document.getElementById('limit-total').value) || 0;
-  const minMatches = matchType === 'singles' ? Math.ceil(pool.length/2) : Math.ceil(pool.length/4);
-  if (limitTotal > 0 && limitTotal < minMatches) {
-    if (!confirm(`設定した試合数では全員が最低1試合できません。\n（必要最小試合数：${minMatches}試合）\nこのまま続けますか？`)) return;
+
+  let result;
+  if (matchType === 'singles') {
+    const isPerMode = document.getElementById('mode-per').checked;
+    const limitPerPerson = isPerMode ? (parseInt(document.getElementById('limit-per-person').value) || 0) : 0;
+    const limitTotal     = isPerMode ? 0 : (parseInt(document.getElementById('limit-total-singles').value) || 0);
+    result = generateSingles(pool, limitPerPerson, limitTotal);
+  } else {
+    const limitTotal = parseInt(document.getElementById('limit-total-doubles').value) || 0;
+    result = generateDoubles(pool, limitTotal);
   }
-  matchType === 'singles'
-    ? generateSingles(pool, limitTotal)
-    : generateDoubles(pool, limitTotal);
-  let courtNum = 1;
-  matches.forEach(mx => { mx.court = courtNum; courtNum = courtNum >= courts ? 1 : courtNum+1; });
+
+  if (!result) return;
+  matches = result;
+
+  // コート番号割り当て（ラウンド単位）
+  const perMatch = matchType === 'singles' ? 2 : 4;
+  const matchesPerRound = courts;
+  matches.forEach((mx, i) => { mx.court = (i % matchesPerRound) + 1; });
+
   const obj = {}; matches.forEach((m, i) => { obj[i] = m; });
   fbSet('matches', obj);
   renderMatchList();
   updateHeaderStats();
 };
 
-function generateSingles(pool, limitTotal) {
-  const m = shuffle(pool);
-  let candidates = [];
-  for (let i = 0; i < m.length; i++)
-    for (let j = i+1; j < m.length; j++) candidates.push({ p1:m[i], p2:m[j] });
-  candidates = shuffle(candidates);
-  if (limitTotal > 0) candidates = candidates.slice(0, limitTotal);
-  matches = candidates.map(c => ({ ...c, s1:'', s2:'', status:'wait', court:0 }));
+function generateSingles(pool, limitPerPerson, limitTotal) {
+  const n = pool.length;
+
+  // 試合数の決定
+  let targetPerPerson = 0;
+  if (limitPerPerson > 0) {
+    targetPerPerson = limitPerPerson;
+  } else if (limitTotal > 0) {
+    // 均等チェック
+    if (ruleEqual && (limitTotal * 2) % n !== 0) {
+      if (!confirm(`合計${limitTotal}試合では全員均等になりません。\n（${n}人で均等にするには合計試合数が${n}の倍数÷2である必要があります）\nこのまま続けますか？`)) return null;
+    }
+    targetPerPerson = 0; // 上限モードはスライス
+  }
+
+  // 全組み合わせ生成
+  const all = [];
+  for (let i = 0; i < n; i++)
+    for (let j = i+1; j < n; j++) all.push({ p1: pool[i], p2: pool[j] });
+
+  const relaxConsec = shouldRelaxConsec();
+
+  if (limitPerPerson > 0) {
+    // 1人あたり◯試合モード：各自ちょうどlimitPerPerson試合になるように生成
+    const totalGames = Math.floor(n * limitPerPerson / 2);
+    // 均等チェック
+    if (ruleEqual && (n * limitPerPerson) % 2 !== 0) {
+      if (!confirm(`${n}人で1人${limitPerPerson}試合は均等にできません。\nこのまま続けますか？`)) return null;
+    }
+    return buildRounds(pool, all, totalGames, relaxConsec, limitPerPerson);
+  } else if (limitTotal > 0) {
+    return buildRounds(pool, all, limitTotal, relaxConsec, 0);
+  } else {
+    // 制限なし：全組み合わせをランダムに
+    return buildRounds(pool, all, all.length, relaxConsec, 0);
+  }
 }
 
 function generateDoubles(pool, limitTotal) {
-  const maxGames = limitTotal > 0 ? limitTotal : 99999;
-  const playCount = {}; pool.forEach(p => { playCount[p]=0; });
-  const pairHist = {};
-  const pKey  = (a,b) => [a,b].sort().join('__');
-  const gPair = (a,b) => pairHist[pKey(a,b)] || 0;
-  const aPair = (a,b) => { const k=pKey(a,b); pairHist[k]=(pairHist[k]||0)+1; };
-  const score = (t1,t2) => gPair(t1[0],t1[1]) + gPair(t2[0],t2[1]);
-  const best3 = four => {
-    const opts = [
-      {t1:[four[0],four[1]], t2:[four[2],four[3]]},
-      {t1:[four[0],four[2]], t2:[four[1],four[3]]},
-      {t1:[four[0],four[3]], t2:[four[1],four[2]]},
-    ];
-    opts.sort((a,b) => score(a.t1,a.t2) - score(b.t1,b.t2));
-    return opts[0];
-  };
-  const generated = []; let failStreak = 0;
-  while (generated.length < maxGames && failStreak < 30) {
-    const avail = shuffle(pool).sort((a,b) => playCount[a]-playCount[b]);
+  const n = pool.length;
+  if (n < 4) { alert('ダブルスには4人以上必要です。'); return null; }
+
+  const relaxConsec = shouldRelaxConsec();
+  const maxGames = limitTotal > 0 ? limitTotal : 9999;
+
+  // 均等チェック
+  if (ruleEqual && limitTotal > 0 && (limitTotal * 4) % n !== 0) {
+    if (!confirm(`合計${limitTotal}試合では全員均等になりません。\nこのまま続けますか？`)) return null;
+  }
+
+  const playCount = {}; pool.forEach(p => { playCount[p] = 0; });
+  const pairCount = {}; // { 'A__B': count }
+  const pKey = (a, b) => [a, b].sort().join('__');
+  const getPair = (a, b) => pairCount[pKey(a, b)] || 0;
+  const addPair = (a, b) => { const k = pKey(a, b); pairCount[k] = (pairCount[k] || 0) + 1; };
+
+  const generated = [];
+  let failStreak = 0;
+  const MAX_FAIL = 100;
+
+  while (generated.length < maxGames && failStreak < MAX_FAIL) {
+    const minCount = Math.min(...pool.map(p => playCount[p]));
+    // 試合数が少ない人を優先
+    let avail = shuffle(pool.filter(p => playCount[p] === minCount));
+    if (avail.length < 4) avail = shuffle(pool).sort((a, b) => playCount[a] - playCount[b]);
     if (avail.length < 4) break;
-    let best = best3(avail.slice(0,4));
-    if (gPair(best.t1[0],best.t1[1]) > 0 || gPair(best.t2[0],best.t2[1]) > 0) {
-      const wider = shuffle(avail.slice(0,Math.min(8,avail.length))).slice(0,4);
-      best = best3(wider);
-      if (gPair(best.t1[0],best.t1[1]) > 0 || gPair(best.t2[0],best.t2[1]) > 0) { failStreak++; continue; }
+
+    // 全員が1回以上試合したか
+    const phase2 = pool.every(p => playCount[p] >= 1);
+
+    // 連続不可チェック用：直前2ラウンド分の出場者
+    const prevRounds = generated.slice(-courts * 2);
+    const recentPlayers = new Set();
+    if (!relaxConsec && ruleConsec) {
+      prevRounds.forEach(m => {
+        m.p1.split(' / ').forEach(p => recentPlayers.add(p));
+        m.p2.split(' / ').forEach(p => recentPlayers.add(p));
+      });
     }
-    aPair(best.t1[0],best.t1[1]); aPair(best.t2[0],best.t2[1]);
-    [...best.t1,...best.t2].forEach(p => playCount[p]++);
-    generated.push({ p1:best.t1.join(' / '), p2:best.t2.join(' / '), s1:'', s2:'', status:'wait', court:0 });
+
+    // 4人選出（連続不可・均等を考慮）
+    const candidates = avail.slice(0, Math.min(avail.length, 8));
+    
+    // 連続不可が有効な場合、直前ラウンドに出ていない人を優先
+    let preferred = candidates.filter(p => !recentPlayers.has(p));
+    if (preferred.length < 4) preferred = candidates;
+
+    // ペアの組み合わせを評価
+    const tryFour = preferred.slice(0, 4);
+    if (tryFour.length < 4) { failStreak++; continue; }
+
+    const opts = [
+      { t1: [tryFour[0], tryFour[1]], t2: [tryFour[2], tryFour[3]] },
+      { t1: [tryFour[0], tryFour[2]], t2: [tryFour[1], tryFour[3]] },
+      { t1: [tryFour[0], tryFour[3]], t2: [tryFour[1], tryFour[2]] },
+    ];
+
+    // phase1: 同じペアなし / phase2: 連続ペアなし
+    const validOpts = opts.filter(o => {
+      if (!phase2) {
+        return getPair(o.t1[0], o.t1[1]) === 0 && getPair(o.t2[0], o.t2[1]) === 0;
+      } else {
+        // ruleConsecがOFFなら制限なし
+        if (!ruleConsec || relaxConsec) return true;
+        // 直前ラウンドと同じペアでないか
+        const prevGames = generated.slice(-courts);
+        if (!prevGames.length) return true;
+        const prevPairs = [];
+        prevGames.forEach(g => {
+          prevPairs.push(g.p1.split(' / '));
+          prevPairs.push(g.p2.split(' / '));
+        });
+        const sameAsRecent = prevPairs.some(lp =>
+          (lp[0]===o.t1[0]&&lp[1]===o.t1[1]) || (lp[0]===o.t2[0]&&lp[1]===o.t2[1])
+        );
+        return !sameAsRecent;
+      }
+    });
+
+    if (validOpts.length === 0) { failStreak++; continue; }
+
+    // スコアが最小のoptを選択（均等化）
+    validOpts.sort((a, b) =>
+      (getPair(a.t1[0],a.t1[1]) + getPair(a.t2[0],a.t2[1])) -
+      (getPair(b.t1[0],b.t1[1]) + getPair(b.t2[0],b.t2[1]))
+    );
+    const best = validOpts[0];
+
+    addPair(best.t1[0], best.t1[1]);
+    addPair(best.t2[0], best.t2[1]);
+    [...best.t1, ...best.t2].forEach(p => playCount[p]++);
+    generated.push({ p1: best.t1.join(' / '), p2: best.t2.join(' / '), s1: '', s2: '', status: 'wait', court: 0 });
     failStreak = 0;
   }
-  if (!generated.length) { alert('条件を満たす組み合わせが見つかりませんでした。'); return; }
-  matches = generated;
+
+  if (!generated.length) { alert('条件を満たす組み合わせが見つかりませんでした。\n人数・コート数・試合数の設定を確認してください。'); return null; }
+  return generated;
+}
+
+// ラウンド単位で試合を組み立てる（シングルス用）
+function buildRounds(pool, allCombinations, targetGames, relaxConsec, limitPerPerson) {
+  const n = pool.length;
+  const playCount = {}; pool.forEach(p => { playCount[p] = 0; });
+  const generated = [];
+  let remaining = shuffle([...allCombinations]);
+  let failStreak = 0;
+  const MAX_FAIL = 200;
+
+  while (generated.length < targetGames && failStreak < MAX_FAIL) {
+    // 直前ラウンドの出場者
+    const prevRound = generated.slice(-courts);
+    const recentPlayers = new Set();
+    if (!relaxConsec && ruleConsec) {
+      prevRound.forEach(m => { recentPlayers.add(m.p1); recentPlayers.add(m.p2); });
+    }
+
+    // 均等：試合数が最少の人を含む組み合わせを優先
+    const minCount = Math.min(...pool.map(p => playCount[p]));
+    if (limitPerPerson > 0 && minCount >= limitPerPerson) break;
+
+    // 有効な組み合わせを探す
+    const idx = remaining.findIndex(c => {
+      if (limitPerPerson > 0 && (playCount[c.p1] >= limitPerPerson || playCount[c.p2] >= limitPerPerson)) return false;
+      if (ruleEqual && playCount[c.p1] > minCount && playCount[c.p2] > minCount) return false;
+      if (!relaxConsec && ruleConsec && (recentPlayers.has(c.p1) || recentPlayers.has(c.p2))) return false;
+      return true;
+    });
+
+    if (idx === -1) {
+      // 連続不可を緩和して再試行
+      const idx2 = remaining.findIndex(c => {
+        if (limitPerPerson > 0 && (playCount[c.p1] >= limitPerPerson || playCount[c.p2] >= limitPerPerson)) return false;
+        if (ruleEqual && playCount[c.p1] > minCount && playCount[c.p2] > minCount) return false;
+        return true;
+      });
+      if (idx2 === -1) { failStreak++; remaining = shuffle([...allCombinations].filter(c => {
+        if (limitPerPerson > 0 && (playCount[c.p1] >= limitPerPerson || playCount[c.p2] >= limitPerPerson)) return false;
+        return true;
+      })); continue; }
+      const c = remaining.splice(idx2, 1)[0];
+      playCount[c.p1]++; playCount[c.p2]++;
+      generated.push({ ...c, s1: '', s2: '', status: 'wait', court: 0 });
+    } else {
+      const c = remaining.splice(idx, 1)[0];
+      playCount[c.p1]++; playCount[c.p2]++;
+      generated.push({ ...c, s1: '', s2: '', status: 'wait', court: 0 });
+    }
+    failStreak = 0;
+
+    // 使い切ったら再シャッフル
+    if (remaining.length === 0) {
+      remaining = shuffle([...allCombinations].filter(c => {
+        if (limitPerPerson > 0 && (playCount[c.p1] >= limitPerPerson || playCount[c.p2] >= limitPerPerson)) return false;
+        return true;
+      }));
+    }
+  }
+
+  if (!generated.length) { alert('条件を満たす組み合わせが見つかりませんでした。'); return null; }
+  return generated;
 }
 
 /* ── 試合リスト ── */
