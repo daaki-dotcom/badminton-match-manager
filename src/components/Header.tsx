@@ -17,32 +17,37 @@ export function Header({ attendance, matches, connected, syncing, role, onLogout
 
   return (
     <header className="header">
-      <div className="header-logo">
+
+      {/* 1行目：ロゴ＋アプリ名 */}
+      <div className="header-row1">
         <div className="logo-icon">🏸</div>
-        <div style={{ lineHeight: 1.3 }}>バドミントン<br />試合管理</div>
+        <span className="header-title">バドミントン試合管理</span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+
+      {/* 2行目：同期状態（左）＋統計＋ボタン（右） */}
+      <div className="header-row2">
         <div className="sync-status">
           <div className={`sync-dot ${connected ? 'connected' : ''}`} />
-          <span style={{ whiteSpace: 'nowrap' }}>
+          <span className="sync-label">
             {syncing ? '同期中...' : connected ? 'リアルタイム同期中' : '切断中'}
           </span>
         </div>
-        <div className="header-stats">
-          <div className="hstat"><div className="hstat-num">{attendCount}</div>参加</div>
-          <div className="hstat"><div className="hstat-num">{matchCount}</div>試合</div>
-          <div className="hstat"><div className="hstat-num">{doneCount}</div>終了</div>
-        </div>
-        {/* guest 以外はログアウトボタンを表示 */}
-        {role !== 'guest' && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-sm" onClick={onOpenSettings} title="設定">⚙️</button>
-            <button className="btn btn-sm" onClick={onLogout} style={{ whiteSpace: 'nowrap' }}>
-              ログアウト
-            </button>
+
+        <div className="header-row2-right">
+          <div className="header-stats">
+            <div className="hstat"><div className="hstat-num">{attendCount}</div>参加</div>
+            <div className="hstat"><div className="hstat-num">{matchCount}</div>試合</div>
+            <div className="hstat"><div className="hstat-num">{doneCount}</div>終了</div>
           </div>
-        )}
+          {role !== 'guest' && (
+            <>
+              <button className="header-btn-icon" onClick={onOpenSettings} title="設定">⚙️</button>
+              <button className="header-btn-logout" onClick={onLogout}>ログアウト</button>
+            </>
+          )}
+        </div>
       </div>
+
     </header>
   )
 }
