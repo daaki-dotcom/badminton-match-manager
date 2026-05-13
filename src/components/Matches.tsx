@@ -10,13 +10,14 @@ interface Props {
   role: UserRole
   ownerNames: string[]
   maskMap: Record<string, string>
+  isActivityEnded: boolean
   onGenerate: (matches: Match[]) => void
   onUpdateScore: (i: number, side: 1 | 2, val: string) => void
   onUpdateStatus: (i: number, val: Match['status']) => void
   onUpdateCourts: (n: number) => void
 }
 
-export function Matches({ attendance, memberLevels, matches, courts, role, ownerNames, maskMap, onGenerate, onUpdateScore, onUpdateStatus, onUpdateCourts }: Props) {
+export function Matches({ attendance, memberLevels, matches, courts, role, ownerNames, maskMap, isActivityEnded, onGenerate, onUpdateScore, onUpdateStatus, onUpdateCourts }: Props) {
   // "田中 / 鈴木" 形式のダブルスにも対応してマスク
   const maskPlayer = (str: string) =>
     str.split(' / ').map(n => maskMap[n] ?? n).join(' / ')
@@ -33,9 +34,9 @@ export function Matches({ attendance, memberLevels, matches, courts, role, owner
   const [detailConsec, setDetailConsec]         = useState(false)
   const [settingsOpen, setSettingsOpen]         = useState(true)  // 生成前:展開 / 生成後:折りたたみ
 
-  const isAdmin   = role === 'admin' || role === 'owner'
-  // admin と member は試合操作（スコア・ステータス）が可能
-  const canOperate = role === 'admin' || role === 'member'
+  const isAdmin    = (role === 'admin' || role === 'owner') && !isActivityEnded
+  // admin と member は試合操作（スコア・ステータス）が可能。活動終了後はロック
+  const canOperate = (role === 'admin' || role === 'member') && !isActivityEnded
 
   // owner は試合に参加しないため除外する
   const attendees = Object.keys(attendance)

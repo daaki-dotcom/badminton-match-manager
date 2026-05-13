@@ -7,11 +7,12 @@ interface Props {
   role: UserRole
   authUserName?: string
   maskMap: Record<string, string>
+  isActivityEnded: boolean
   onSetParty: (name: string, val: PartyStatus) => void
   onResetParty: () => void
 }
 
-export function Party({ attendance, party, role, authUserName, maskMap, onSetParty, onResetParty }: Props) {
+export function Party({ attendance, party, role, authUserName, maskMap, isActivityEnded, onSetParty, onResetParty }: Props) {
   const d = (name: string) => maskMap[name] ?? name
   const [showAll, setShowAll] = useState(false)
 
@@ -27,9 +28,9 @@ export function Party({ attendance, party, role, authUserName, maskMap, onSetPar
   const isAdmin  = role === 'admin' || role === 'owner'
   const isGuest  = role === 'guest'
 
-  // 非ゲストは全員分回答可、名前登録済みゲストは自分の行のみ回答可
+  // 非ゲストは全員分回答可、名前登録済みゲストは自分の行のみ回答可。活動終了後はロック
   const canAnswerRow = (rowName: string) =>
-    !isGuest || (!!authUserName && rowName === authUserName)
+    !isActivityEnded && (!isGuest || (!!authUserName && rowName === authUserName))
 
   const BtnPair = ({ name }: { name: string }) => {
     if (!canAnswerRow(name)) return null

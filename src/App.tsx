@@ -87,6 +87,13 @@ export default function App() {
 
   const role = authUser.role
 
+  // 活動日の23:59:59 を過ぎていたら編集ロック
+  const isActivityEnded = !!state.activityDate && (() => {
+    const d = new Date(state.activityDate)
+    d.setHours(23, 59, 59, 999)
+    return Date.now() > d.getTime()
+  })()
+
   // 未登録ゲスト用 名前マスクマップ（名前 → "参加者A/B/..."）
   const isUnregisteredGuest = role === 'guest' && !authUser.name
   const maskMap: Record<string, string> = (() => {
@@ -236,6 +243,7 @@ export default function App() {
             authUser={authUser}
             state={state}
             isManagementOnly={managementOnlyNames.includes(authUser.name)}
+            isActivityEnded={isActivityEnded}
             onSubmitAttendance={handleSubmitAttendance}
             onGuestNameRegister={handleGuestNameRegister}
             onNavigate={(tab) => setActiveTab(tab as Tab)}
@@ -267,6 +275,7 @@ export default function App() {
             role={role}
             ownerNames={managementOnlyNames}
             maskMap={maskMap}
+            isActivityEnded={isActivityEnded}
             onGenerate={handleGenerate}
             onUpdateScore={handleUpdateScore}
             onUpdateStatus={handleUpdateStatus}
@@ -288,6 +297,7 @@ export default function App() {
             role={role}
             authUserName={authUser.name}
             maskMap={maskMap}
+            isActivityEnded={isActivityEnded}
             onSetParty={handleSetParty}
             onResetParty={handleResetParty}
           />

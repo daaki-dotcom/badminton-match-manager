@@ -5,12 +5,13 @@ interface Props {
   authUser: AuthUser
   state: AppState
   isManagementOnly: boolean
+  isActivityEnded: boolean
   onSubmitAttendance: (name: string, val: AttendanceStatus) => void
   onGuestNameRegister?: (name: string, status: AttendanceStatus) => void
   onNavigate: (tab: string) => void
 }
 
-export function Home({ authUser, state, isManagementOnly, onSubmitAttendance, onGuestNameRegister, onNavigate }: Props) {
+export function Home({ authUser, state, isManagementOnly, isActivityEnded, onSubmitAttendance, onGuestNameRegister, onNavigate }: Props) {
   const { attendance, activityDate, matches, memberLevels } = state
   const { name, role } = authUser
 
@@ -55,8 +56,16 @@ export function Home({ authUser, state, isManagementOnly, onSubmitAttendance, on
 
   return (
     <div className="home">
-      {/* ゲスト名前登録フォーム（名前未登録の場合のみ表示） */}
-      {isGuest && !name && (
+      {/* 活動終了バナー */}
+      {isActivityEnded && (
+        <div className="card" style={{ borderColor: 'rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.08)', textAlign: 'center' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--red)' }}>🔒 活動は終了しました</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>データの編集はできません（閲覧のみ）</div>
+        </div>
+      )}
+
+      {/* ゲスト名前登録フォーム（名前未登録 かつ 活動中のみ表示） */}
+      {isGuest && !name && !isActivityEnded && (
         <div className="card">
           <div className="card-title">👤 ゲスト登録</div>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
@@ -150,8 +159,8 @@ export function Home({ authUser, state, isManagementOnly, onSubmitAttendance, on
         )}
       </div>
 
-      {/* 自分の出欠（管理専用・名前未登録ゲスト以外） */}
-      {!isManagementOnly && (!isGuest || guestNamed) && (
+      {/* 自分の出欠（管理専用・名前未登録ゲスト・活動終了時は非表示） */}
+      {!isManagementOnly && (!isGuest || guestNamed) && !isActivityEnded && (
         <div className="card">
           <div className="card-title">📋 あなたの出欠</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
