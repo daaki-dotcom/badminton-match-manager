@@ -56,6 +56,7 @@ export interface SessionData {
 
 // localStorage に保存するゲストセッションデータ
 export interface GuestSessionData {
+  guestId: string     // 登録時に生成する一意ID（例: g_abc123）
   name: string
-  expiry: number      // 活動日の23:59:59（ms）
+  expiry: number      // 活動日の23:59:59（ms）・期限後はIDを解放
 }

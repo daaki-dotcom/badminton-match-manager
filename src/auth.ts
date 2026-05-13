@@ -39,6 +39,13 @@ export async function loginWithId(userId: string, password: string): Promise<Aut
   return user
 }
 
+// ゲスト用のランダムID（例: g_abc123）を生成する
+export function generateGuestId(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  const rand = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  return `g_${rand}`
+}
+
 // guest として入場する（名前は後でホーム画面で登録するため空文字）
 export function loginAsGuest(): AuthUser {
   return { userId: 'guest', role: 'guest', name: '', isFirstLogin: false }
@@ -82,8 +89,9 @@ function getEndOfDay(dateStr: string): number {
 }
 
 // ゲストセッションを localStorage に保存する
-export function saveGuestSession(name: string, activityDate: string): void {
+export function saveGuestSession(guestId: string, name: string, activityDate: string): void {
   const session: GuestSessionData = {
+    guestId,
     name,
     expiry: getEndOfDay(activityDate),
   }

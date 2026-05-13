@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ref, onValue } from 'firebase/database'
 import { db, ROOT } from './firebase'
 import { useFirebase } from './hooks/useFirebase'
-import { loadSession, clearSession, saveSession, loadGuestSession, saveGuestSession, clearGuestSession } from './auth'
+import { loadSession, clearSession, saveSession, loadGuestSession, saveGuestSession, clearGuestSession, generateGuestId } from './auth'
 import { Header } from './components/Header'
 import { Login } from './components/Login'
 import { PasswordChange } from './components/PasswordChange'
@@ -37,7 +37,7 @@ export default function App() {
     } else {
       const guestSession = loadGuestSession()
       if (guestSession) {
-        setAuthUser({ userId: 'guest', role: 'guest', name: guestSession.name, isFirstLogin: false })
+        setAuthUser({ userId: guestSession.guestId, role: 'guest', name: guestSession.name, isFirstLogin: false })
       }
     }
     setAuthReady(true)
@@ -173,8 +173,9 @@ export default function App() {
   }
 
   const handleGuestNameRegister = (name: string, status: AttendanceStatus) => {
-    saveGuestSession(name, state.activityDate)
-    setAuthUser(u => u ? { ...u, name } : null)
+    const guestId = generateGuestId()
+    saveGuestSession(guestId, name, state.activityDate)
+    setAuthUser(u => u ? { ...u, userId: guestId, name } : null)
     const next = { ...state.attendance, [name]: status }
     setState(s => ({ ...s, attendance: next }))
     fbSet('attendance', next)
