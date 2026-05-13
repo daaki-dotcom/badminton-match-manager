@@ -6,9 +6,10 @@ interface Props {
   memberLevels:         Record<string, MemberLevel>
   dbLevels:             Record<string, MemberLevel>
   memberNames:          string[]
-  managementOnlyNames:  string[]   // 管理専用ユーザー（表示から除外）
+  managementOnlyNames:  string[]
   courts:               number
   role:                 UserRole
+  maskMap:              Record<string, string>
   paymentClub:          Record<string, boolean>
   paymentParty:         Record<string, boolean>
   onToggleLevel:        (name: string) => void
@@ -18,9 +19,11 @@ interface Props {
 
 export function Members({
   attendance, memberLevels, dbLevels, memberNames, managementOnlyNames, courts, role,
-  paymentClub, paymentParty,
+  maskMap, paymentClub, paymentParty,
   onToggleLevel, onTogglePaymentClub, onTogglePaymentParty,
 }: Props) {
+  const masked = Object.keys(maskMap).length > 0
+  const d = (name: string) => maskMap[name] ?? name
   const [showList, setShowList] = useState(false)
 
   const mgmtSet = new Set(managementOnlyNames)
@@ -107,14 +110,16 @@ export function Members({
           {showList && (
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.75rem', marginBottom: '0.75rem' }}>
               {attendees.map(name => (
-                <div key={name} style={{ fontSize: 14, lineHeight: 2 }}>{name}</div>
+                <div key={name} style={{ fontSize: 14, lineHeight: 2 }}>{d(name)}</div>
               ))}
             </div>
           )}
-          <button className="btn btn-accent" style={{ width: '100%' }}
-            onClick={() => navigator.clipboard.writeText(attendees.join('\n'))}>
-            一覧をコピー
-          </button>
+          {!masked && (
+            <button className="btn btn-accent" style={{ width: '100%' }}
+              onClick={() => navigator.clipboard.writeText(attendees.join('\n'))}>
+              一覧をコピー
+            </button>
+          )}
         </div>
       )}
 
@@ -127,14 +132,14 @@ export function Members({
             <tbody>
               {noList.map(name => (
                 <tr key={name}>
-                  <td style={{ fontWeight: 500 }}>{name}</td>
+                  <td style={{ fontWeight: 500 }}>{d(name)}</td>
                   <td><MemberBadge name={name} /></td>
                   <td><span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)' }}>不参加</span></td>
                 </tr>
               ))}
               {undList.map(name => (
                 <tr key={name}>
-                  <td style={{ fontWeight: 500 }}>{name}</td>
+                  <td style={{ fontWeight: 500 }}>{d(name)}</td>
                   <td><MemberBadge name={name} /></td>
                   <td><span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent3)' }}>未定</span></td>
                 </tr>
@@ -163,7 +168,7 @@ export function Members({
             <tbody>
               {attendees.map(name => (
                 <tr key={name}>
-                  <td style={{ fontWeight: 500 }}>{name}</td>
+                  <td style={{ fontWeight: 500 }}>{d(name)}</td>
                   <td><MemberBadge name={name} /></td>
                   <td><LevelBadge name={name} /></td>
                   <td>

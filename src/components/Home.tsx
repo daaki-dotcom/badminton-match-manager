@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { AuthUser, AppState, AttendanceStatus } from '../types'
 
 interface Props {
@@ -5,23 +6,29 @@ interface Props {
   state: AppState
   isManagementOnly: boolean
   onSubmitAttendance: (name: string, val: AttendanceStatus) => void
+  onGuestNameRegister?: (name: string, status: AttendanceStatus) => void
   onNavigate: (tab: string) => void
 }
 
-export function Home({ authUser, state, isManagementOnly, onSubmitAttendance, onNavigate }: Props) {
+export function Home({ authUser, state, isManagementOnly, onSubmitAttendance, onGuestNameRegister, onNavigate }: Props) {
   const { attendance, activityDate, matches, memberLevels } = state
   const { name, role } = authUser
 
-  const isGuest  = role === 'guest'
-  const isAdmin  = role === 'admin'
+  const isGuest       = role === 'guest'
+  const isAdmin       = role === 'admin'
+  const guestNamed    = isGuest && !!name
+
+  const [guestInput, setGuestInput]   = useState('')
+  const [guestStatus, setGuestStatus] = useState<AttendanceStatus>('yes')
+  const [guestError, setGuestError]   = useState('')
 
   // 出欠統計
   const yesList  = Object.keys(attendance).filter(n => attendance[n] === 'yes')
   const noList   = Object.keys(attendance).filter(n => attendance[n] === 'no')
   const undList  = Object.keys(attendance).filter(n => attendance[n] === 'undecided')
 
-  // 自分の出欠状況（ゲスト・管理専用以外）
-  const myStatus = (isGuest || isManagementOnly) ? null : attendance[name]
+  // 自分の出欠状況（管理専用・名前未登録ゲスト以外）
+  const myStatus = (isManagementOnly || (isGuest && !name)) ? null : attendance[name]
   const statusLabel: Record<string, string> = { yes: '✅ 参加', no: '❌ 不参加', undecided: '🕐 未定', '': '未回答' }
   const statusColor: Record<string, string> = { yes: 'var(--accent)', no: 'var(--red)', undecided: 'var(--accent3)', '': 'var(--text-muted)' }
 
@@ -48,10 +55,59 @@ export function Home({ authUser, state, isManagementOnly, onSubmitAttendance, on
 
   return (
     <div className="home">
+      {/* ゲスト名前登録フォーム（名前未登録の場合のみ表示） */}
+      {isGuest && !name && (
+        <div className="card">
+          <div className="card-title">👤 ゲスト登録</div>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
+            名前と出欠を入力してください。活動日終了まで保存されます。
+          </p>
+          <label className="login-label" style={{ marginBottom: '0.75rem' }}>
+            名前
+            <input
+              className="login-input"
+              type="text"
+              value={guestInput}
+              onChange={e => { setGuestInput(e.target.value); setGuestError('') }}
+              placeholder="例：田中 太郎"
+              maxLength={20}
+            />
+          </label>
+          <div style={{ marginTop: '0.5rem' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>出欠</div>
+            <div className="fmt-group">
+              <button className={`fmt-btn ${guestStatus === 'yes' ? 'selected' : ''}`}
+                style={{ color: 'var(--accent)', borderColor: 'rgba(110,231,183,0.4)' }}
+                onClick={() => setGuestStatus('yes')}>参加</button>
+              <button className={`fmt-btn ${guestStatus === 'no' ? 'selected' : ''}`}
+                style={{ color: 'var(--red)', borderColor: 'rgba(248,113,113,0.4)' }}
+                onClick={() => setGuestStatus('no')}>不参加</button>
+              <button className={`fmt-btn ${guestStatus === 'undecided' ? 'selected' : ''}`}
+                style={{ color: 'var(--accent3)', borderColor: 'rgba(251,191,36,0.4)' }}
+                onClick={() => setGuestStatus('undecided')}>未定</button>
+            </div>
+          </div>
+          {guestError && <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 6 }}>{guestError}</p>}
+          <button
+            className="btn btn-accent"
+            style={{ marginTop: '1rem', width: '100%' }}
+            onClick={() => {
+              if (!guestInput.trim()) { setGuestError('名前を入力してください'); return }
+              onGuestNameRegister?.(guestInput.trim(), guestStatus)
+            }}
+          >
+            登録する
+          </button>
+        </div>
+      )}
+
       {/* ウェルカムカード */}
       <div className="home-welcome">
         <div className="home-greeting">
-          <span className="home-name">{name}</span> さん、こんにちは！
+          {name
+            ? <><span className="home-name">{name}</span> さん、こんにちは！</>
+            : <>ゲストとして入場中</>
+          }
         </div>
         <span className={`role-badge role-${role === 'guest' ? 'guest' : role}`}>
           {role}
@@ -75,14 +131,14 @@ export function Home({ authUser, state, isManagementOnly, onSubmitAttendance, on
         )}
         {isAdmin && !activityDate && (
           <button className="btn btn-accent" style={{ marginTop: '0.75rem', width: '100%' }}
-            onClick={() => onNavigate('attendance')}>
+            onClick={() => onNavigate('admin')}>
             活動日を設定する
           </button>
         )}
       </div>
 
-      {/* 自分の出欠（ゲスト・管理専用以外） */}
-      {!isGuest && !isManagementOnly && (
+      {/* 自分の出欠（管理専用・名前未登録ゲスト以外） */}
+      {!isManagementOnly && (!isGuest || guestNamed) && (
         <div className="card">
           <div className="card-title">📋 あなたの出欠</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -159,10 +215,6 @@ export function Home({ authUser, state, isManagementOnly, onSubmitAttendance, on
 
       {/* クイックナビ */}
       <div className="home-nav-grid">
-        <button className="home-nav-btn" onClick={() => onNavigate('attendance')}>
-          <span className="home-nav-icon">📋</span>
-          <span>出欠</span>
-        </button>
         <button className="home-nav-btn" onClick={() => onNavigate('members')}>
           <span className="home-nav-icon">👥</span>
           <span>メンバー</span>

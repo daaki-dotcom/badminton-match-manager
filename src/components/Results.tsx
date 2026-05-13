@@ -4,9 +4,11 @@ interface Props {
   attendance: Record<string, AttendanceStatus>
   memberLevels: Record<string, MemberLevel>
   matches: Match[]
+  maskMap: Record<string, string>
 }
 
-export function Results({ attendance, memberLevels, matches }: Props) {
+export function Results({ attendance, memberLevels, matches, maskMap }: Props) {
+  const d = (name: string) => maskMap[name] ?? name
   const attendees = Object.keys(attendance).filter(n => attendance[n] === 'yes')
 
   if (!matches.length) {
@@ -71,7 +73,7 @@ export function Results({ attendance, memberLevels, matches }: Props) {
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}位`}
               </div>
               <div className="rank-name">
-                <div>{n}</div>
+                <div>{d(n)}</div>
                 <div style={{ marginTop: 3 }}>
                   <span className={isExp ? 'badge-exp' : 'badge-nov'}>{isExp ? '経験者' : '未経験者'}</span>
                 </div>

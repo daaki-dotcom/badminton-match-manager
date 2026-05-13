@@ -9,13 +9,17 @@ interface Props {
   courts: number
   role: UserRole
   ownerNames: string[]
+  maskMap: Record<string, string>
   onGenerate: (matches: Match[]) => void
   onUpdateScore: (i: number, side: 1 | 2, val: string) => void
   onUpdateStatus: (i: number, val: Match['status']) => void
   onUpdateCourts: (n: number) => void
 }
 
-export function Matches({ attendance, memberLevels, matches, courts, role, ownerNames, onGenerate, onUpdateScore, onUpdateStatus, onUpdateCourts }: Props) {
+export function Matches({ attendance, memberLevels, matches, courts, role, ownerNames, maskMap, onGenerate, onUpdateScore, onUpdateStatus, onUpdateCourts }: Props) {
+  // "田中 / 鈴木" 形式のダブルスにも対応してマスク
+  const maskPlayer = (str: string) =>
+    str.split(' / ').map(n => maskMap[n] ?? n).join(' / ')
   const [matchType, setMatchType]               = useState<MatchType>('singles')
   const [tierFilter, setTierFilter]             = useState<TierFilter>('all')
   const [singlesMode, setSinglesMode]           = useState<'per' | 'total' | 'none'>('per')
@@ -254,9 +258,9 @@ export function Matches({ attendance, memberLevels, matches, courts, role, owner
                 return (
                   <div key={i} className={`match-item ${m.status}`}>
                     <div className="match-left">
-                      <div className="match-team">{m.p1}</div>
+                      <div className="match-team">{maskPlayer(m.p1)}</div>
                       <div className="match-meta">C{m.court}</div>
-                      <div className="match-team">{m.p2}</div>
+                      <div className="match-team">{maskPlayer(m.p2)}</div>
                     </div>
                     <div className="match-right">
                       {canOperate ? (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ref, get, set } from 'firebase/database'
 import { db, ROOT } from '../firebase'
-import { loginWithId, loginAsGuest, hashPassword } from '../auth'
+import { loginWithId, loginAsGuest, hashPassword, loadGuestSession } from '../auth'
 import { AuthUser, UserRecord } from '../types'
 
 interface Props {
@@ -172,7 +172,14 @@ export function Login({ onLogin }: Props) {
 
         <div className="login-divider">または</div>
 
-        <button className="login-btn-guest" type="button" onClick={() => onLogin(loginAsGuest())}>
+        <button className="login-btn-guest" type="button" onClick={() => {
+          const existing = loadGuestSession()
+          if (existing) {
+            onLogin({ userId: 'guest', role: 'guest', name: existing.name, isFirstLogin: false })
+          } else {
+            onLogin(loginAsGuest())
+          }
+        }}>
           ゲストとして入場する
         </button>
 

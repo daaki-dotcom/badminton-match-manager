@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ref, onValue } from 'firebase/database'
 import { db, ROOT } from './firebase'
 import { useFirebase } from './hooks/useFirebase'
-import { loadSession, clearSession, saveSession } from './auth'
+import { loadSession, clearSession, saveSession, loadGuestSession, saveGuestSession, clearGuestSession } from './auth'
 import { Header } from './components/Header'
 import { Login } from './components/Login'
 import { PasswordChange } from './components/PasswordChange'
@@ -34,6 +34,11 @@ export default function App() {
     const session = loadSession()
     if (session) {
       setAuthUser({ userId: session.userId, role: session.role, name: session.name ?? session.userId, isFirstLogin: false })
+    } else {
+      const guestSession = loadGuestSession()
+      if (guestSession) {
+        setAuthUser({ userId: 'guest', role: 'guest', name: guestSession.name, isFirstLogin: false })
+      }
     }
     setAuthReady(true)
   }, [])
@@ -81,6 +86,15 @@ export default function App() {
   }
 
   const role = authUser.role
+
+  // 未登録ゲスト用 名前マスクマップ（名前 → "参加者A/B/..."）
+  const isUnregisteredGuest = role === 'guest' && !authUser.name
+  const maskMap: Record<string, string> = (() => {
+    if (!isUnregisteredGuest) return {}
+    const all = [...new Set([...memberNames, ...Object.keys(state.attendance)])].sort()
+    const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    return Object.fromEntries(all.map((n, i) => [n, `参加者${labels[i] ?? String(i + 1)}`]))
+  })()
 
   const tabs = [
     { id: 'home'    as Tab, label: '🏠 ホーム' },
@@ -158,8 +172,17 @@ export default function App() {
     fbSet('party', {})
   }
 
+  const handleGuestNameRegister = (name: string, status: AttendanceStatus) => {
+    saveGuestSession(name, state.activityDate)
+    setAuthUser(u => u ? { ...u, name } : null)
+    const next = { ...state.attendance, [name]: status }
+    setState(s => ({ ...s, attendance: next }))
+    fbSet('attendance', next)
+  }
+
   const handleLogout = () => {
     clearSession()
+    clearGuestSession()
     setAuthUser(null)
   }
 
@@ -211,6 +234,7 @@ export default function App() {
             state={state}
             isManagementOnly={managementOnlyNames.includes(authUser.name)}
             onSubmitAttendance={handleSubmitAttendance}
+            onGuestNameRegister={handleGuestNameRegister}
             onNavigate={(tab) => setActiveTab(tab as Tab)}
           />
         )}
@@ -223,6 +247,7 @@ export default function App() {
             managementOnlyNames={managementOnlyNames}
             courts={state.courts}
             role={role}
+            maskMap={maskMap}
             paymentClub={state.paymentClub}
             paymentParty={state.paymentParty}
             onToggleLevel={handleToggleLevel}
@@ -238,6 +263,7 @@ export default function App() {
             courts={state.courts}
             role={role}
             ownerNames={managementOnlyNames}
+            maskMap={maskMap}
             onGenerate={handleGenerate}
             onUpdateScore={handleUpdateScore}
             onUpdateStatus={handleUpdateStatus}
@@ -249,6 +275,7 @@ export default function App() {
             attendance={state.attendance}
             memberLevels={state.memberLevels}
             matches={state.matches}
+            maskMap={maskMap}
           />
         )}
         {activeTab === 'party' && (
@@ -256,6 +283,8 @@ export default function App() {
             attendance={state.attendance}
             party={state.party}
             role={role}
+            authUserName={authUser.name}
+            maskMap={maskMap}
             onSetParty={handleSetParty}
             onResetParty={handleResetParty}
           />

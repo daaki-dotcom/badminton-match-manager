@@ -46,10 +46,16 @@ export interface AuthUser {
   isFirstLogin: boolean
 }
 
-// localStorage に保存するセッションデータ
+// localStorage に保存するセッションデータ（正規部員）
 export interface SessionData {
   userId: string
   role: UserRole
   name: string
   expiry: number      // Unix タイムスタンプ（ms）
+}
+
+// localStorage に保存するゲストセッションデータ
+export interface GuestSessionData {
+  name: string
+  expiry: number      // 活動日の23:59:59（ms）
 }

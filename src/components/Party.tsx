@@ -5,11 +5,14 @@ interface Props {
   attendance: Record<string, AttendanceStatus>
   party: Record<string, PartyStatus>
   role: UserRole
+  authUserName?: string
+  maskMap: Record<string, string>
   onSetParty: (name: string, val: PartyStatus) => void
   onResetParty: () => void
 }
 
-export function Party({ attendance, party, role, onSetParty, onResetParty }: Props) {
+export function Party({ attendance, party, role, authUserName, maskMap, onSetParty, onResetParty }: Props) {
+  const d = (name: string) => maskMap[name] ?? name
   const [showAll, setShowAll] = useState(false)
 
   const attendees    = Object.keys(attendance).filter(n => attendance[n] === 'yes')
@@ -21,14 +24,15 @@ export function Party({ attendance, party, role, onSetParty, onResetParty }: Pro
   const unanswered = attendees.filter(n => !party[n] || (party[n] !== 'yes' && party[n] !== 'no'))
   const allDone    = unanswered.length === 0 && attendees.length > 0
 
-  const isAdmin  = role === 'admin'
+  const isAdmin  = role === 'admin' || role === 'owner'
   const isGuest  = role === 'guest'
 
-  // guest は回答ボタンを表示しない（閲覧のみ）
-  const canAnswer = !isGuest
+  // 非ゲストは全員分回答可、名前登録済みゲストは自分の行のみ回答可
+  const canAnswerRow = (rowName: string) =>
+    !isGuest || (!!authUserName && rowName === authUserName)
 
   const BtnPair = ({ name }: { name: string }) => {
-    if (!canAnswer) return null
+    if (!canAnswerRow(name)) return null
     return (
       <div style={{ display: 'flex', gap: 4 }}>
         {(['yes', 'no'] as PartyStatus[]).map(val => {
@@ -56,10 +60,10 @@ export function Party({ attendance, party, role, onSetParty, onResetParty }: Pro
         <div className="stat-card"><div className="stat-num" style={{ color: 'var(--text-muted)' }}>{pendingCount}</div><div className="stat-label">未回答</div></div>
       </div>
 
-      {isGuest && (
+      {isGuest && !authUserName && (
         <div className="card">
           <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
-            ゲストは懇親会の閲覧のみ可能です
+            ホームで名前を登録すると懇親会の回答ができます
           </p>
         </div>
       )}
@@ -79,11 +83,11 @@ export function Party({ attendance, party, role, onSetParty, onResetParty }: Pro
             <div style={{ textAlign: 'center', padding: '14px', color: 'var(--accent)', fontWeight: 700, marginBottom: 12 }}>🎉 全員回答完了！</div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: 6 }}>参加 {yesCount}人</div>
-              <div style={{ fontSize: 14, lineHeight: 2 }}>{attendees.filter(n => party[n] === 'yes').join('　') || '—'}</div>
+              <div style={{ fontSize: 14, lineHeight: 2 }}>{attendees.filter(n => party[n] === 'yes').map(d).join('　') || '—'}</div>
             </div>
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', letterSpacing: '0.06em', marginBottom: 6 }}>不参加 {noCount}人</div>
-              <div style={{ fontSize: 14, lineHeight: 2 }}>{attendees.filter(n => party[n] === 'no').join('　') || '—'}</div>
+              <div style={{ fontSize: 14, lineHeight: 2 }}>{attendees.filter(n => party[n] === 'no').map(d).join('　') || '—'}</div>
             </div>
             {isAdmin && (
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10, marginTop: 4 }}>
@@ -100,7 +104,7 @@ export function Party({ attendance, party, role, onSetParty, onResetParty }: Pro
             <tbody>
               {(showAll ? answered : unanswered).map(name => (
                 <tr key={name} style={RowStyle as React.CSSProperties}>
-                  <td style={{ fontWeight: 500, fontSize: 13, flex: 1, border: 'none', padding: 0 }}>{name}</td>
+                  <td style={{ fontWeight: 500, fontSize: 13, flex: 1, border: 'none', padding: 0 }}>{d(name)}</td>
                   <td style={{ border: 'none', padding: 0, flexShrink: 0 }}><BtnPair name={name} /></td>
                 </tr>
               ))}
