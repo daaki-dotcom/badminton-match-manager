@@ -40,11 +40,9 @@ export function Header({ attendance, matches, connected, syncing, role, onLogout
             <div className="hstat"><div className="hstat-num">{doneCount}</div>終了</div>
           </div>
           {role !== 'guest' && (
-            <>
-              <button className="header-btn-icon" onClick={onOpenSettings} title="設定">⚙️</button>
-              <button className="header-btn-logout" onClick={onLogout}>ログアウト</button>
-            </>
+            <button className="header-btn-icon" onClick={onOpenSettings} title="設定">⚙️</button>
           )}
+          <button className="header-btn-logout" onClick={onLogout}>ログアウト</button>
         </div>
       </div>
 

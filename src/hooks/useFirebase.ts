@@ -56,6 +56,7 @@ export function useFirebase() {
         if (new Date() > deadline) {
           fbSet('attendance',   {})
           fbSet('activityDate', '')
+          fbSet('matches',      {})
           fbSet('party',        {})
           fbSet('paymentClub',  {})
           fbSet('paymentParty', {})
