@@ -54,15 +54,8 @@ export interface SessionData {
   expiry: number      // Unix タイムスタンプ（ms）
 }
 
-// localStorage に保存するゲストセッションデータ
-export interface GuestSessionData {
-  guestId: string     // 登録時に生成する一意ID（例: g_abc123）
+// Firebase の badminton/guestUsers/{guestId} に保存するデータ（活動日終了時に削除）
+export interface GuestUserRecord {
+  passwordHash: string
   name: string
-  expiry: number      // 活動日の23:59:59（ms）・期限後はIDを解放
-}
-
-// Firebase の badminton/guests/{guestId} に保存するデータ
-export interface GuestRecord {
-  name: string
-  expiry: number      // 活動日の23:59:59（ms）
 }

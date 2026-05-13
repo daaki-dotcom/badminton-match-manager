@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { ref, get, set } from 'firebase/database'
 import { db, ROOT } from '../firebase'
-import { loginWithId, loginAsGuest, hashPassword, loadGuestSession, restoreGuestSession } from '../auth'
-import { AuthUser, UserRecord, GuestRecord } from '../types'
+import { loginWithId, loginAsGuest, hashPassword } from '../auth'
+import { AuthUser, UserRecord } from '../types'
 
 interface Props {
   onLogin: (user: AuthUser) => void
@@ -27,11 +27,6 @@ export function Login({ onLogin }: Props) {
   const [setupError, setSetupError] = useState('')
   const [setupLoading, setSetupLoading] = useState(false)
   const [issuedId, setIssuedId]     = useState('')
-
-  // ゲストID再入場用
-  const [guestIdInput, setGuestIdInput]     = useState('')
-  const [guestIdError, setGuestIdError]     = useState('')
-  const [guestIdLoading, setGuestIdLoading] = useState(false)
 
   // Firebase に users ノードが存在するか確認する
   useEffect(() => {
@@ -71,30 +66,6 @@ export function Login({ onLogin }: Props) {
     setUserId(issuedId)
   }
 
-  // ゲストIDで再入場する
-  const handleGuestRelogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const id = guestIdInput.trim()
-    if (!id) { setGuestIdError('ゲストIDを入力してください'); return }
-
-    setGuestIdLoading(true)
-    setGuestIdError('')
-    const snap = await get(ref(db, `${ROOT}/guests/${id}`))
-    if (!snap.exists()) {
-      setGuestIdError('このゲストIDは存在しないか、期限切れです')
-      setGuestIdLoading(false)
-      return
-    }
-    const record = snap.val() as GuestRecord
-    if (Date.now() > record.expiry) {
-      setGuestIdError('このゲストIDは期限切れです')
-      setGuestIdLoading(false)
-      return
-    }
-    restoreGuestSession(id, record.name, record.expiry)
-    setGuestIdLoading(false)
-    onLogin({ userId: id, role: 'guest', name: record.name, isFirstLogin: false })
-  }
 
   // 通常ログイン
   const handleSubmit = async (e: React.FormEvent) => {
@@ -202,33 +173,11 @@ export function Login({ onLogin }: Props) {
 
         <div className="login-divider">または</div>
 
-        <button className="login-btn-guest" type="button" onClick={() => {
-          const existing = loadGuestSession()
-          if (existing) {
-            onLogin({ userId: existing.guestId, role: 'guest', name: existing.name, isFirstLogin: false })
-          } else {
-            onLogin(loginAsGuest())
-          }
-        }}>
-          ゲストとして入場する
+        <button className="login-btn-guest" type="button" onClick={() => onLogin(loginAsGuest())}>
+          ゲストとして入場する（閲覧のみ）
         </button>
 
-        <p className="login-guest-note">ゲストは閲覧と懇親会回答のみ可能です</p>
-
-        <div className="login-divider">ゲストIDをお持ちの方</div>
-
-        <form onSubmit={handleGuestRelogin} className="login-form" style={{ marginTop: 0 }}>
-          <label className="login-label">
-            ゲストID
-            <input className="login-input" type="text" value={guestIdInput}
-              onChange={e => { setGuestIdInput(e.target.value); setGuestIdError('') }}
-              placeholder="例：g_abc123" autoComplete="off" />
-          </label>
-          {guestIdError && <p className="login-error">{guestIdError}</p>}
-          <button className="login-btn-guest" type="submit" disabled={guestIdLoading}>
-            {guestIdLoading ? '確認中...' : 'ゲストIDで再入場する'}
-          </button>
-        </form>
+        <p className="login-guest-note">参加登録はホーム画面から行えます</p>
       </div>
     </div>
   )

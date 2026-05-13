@@ -49,15 +49,23 @@ export function useFirebase() {
       let paymentParty = data.paymentParty || {}
       let memberLevels = data.memberLevels || {}
 
-      // 活動日から7日後に正規部員・ゲスト問わず全員の出欠・支払いをリセット
       if (activityDate) {
+        const endOfDay = new Date(activityDate)
+        endOfDay.setHours(23, 59, 59, 999)
+
+        // 活動日終了後：ゲスト認証情報を削除（参加者名は7日後まで残す）
+        if (new Date() > endOfDay) {
+          fbSet('guestUsers', {})
+        }
+
+        // 活動日から7日後：全活動データをリセット
         const deadline = new Date(activityDate)
         deadline.setDate(deadline.getDate() + 7)
         if (new Date() > deadline) {
           fbSet('attendance',   {})
           fbSet('activityDate', '')
           fbSet('matches',      {})
-          fbSet('guests',       {})
+          fbSet('guestUsers',   {})
           fbSet('party',        {})
           fbSet('paymentClub',  {})
           fbSet('paymentParty', {})

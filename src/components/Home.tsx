@@ -7,26 +7,25 @@ interface Props {
   isManagementOnly: boolean
   isActivityEnded: boolean
   onSubmitAttendance: (name: string, val: AttendanceStatus) => void
-  onGuestNameRegister?: (name: string, status: AttendanceStatus) => void
+  onGuestRegister?: (name: string) => void
   onNavigate: (tab: string) => void
 }
 
-export function Home({ authUser, state, isManagementOnly, isActivityEnded, onSubmitAttendance, onGuestNameRegister, onNavigate }: Props) {
+export function Home({ authUser, state, isManagementOnly, isActivityEnded, onSubmitAttendance, onGuestRegister, onNavigate }: Props) {
   const { attendance, activityDate, matches, memberLevels } = state
   const { name, role } = authUser
 
-  const isGuest       = role === 'guest'
-  const isAdmin       = role === 'admin'
-  const guestNamed    = isGuest && !!name
+  const isGuest    = role === 'guest'
+  const isAdmin    = role === 'admin'
+  const guestNamed = isGuest && !!name
 
-  const [guestInput, setGuestInput]   = useState('')
-  const [guestStatus, setGuestStatus] = useState<AttendanceStatus>('yes')
-  const [guestError, setGuestError]   = useState('')
+  const [guestInput, setGuestInput] = useState('')
+  const [guestError, setGuestError] = useState('')
 
   // 出欠統計
-  const yesList  = Object.keys(attendance).filter(n => attendance[n] === 'yes')
-  const noList   = Object.keys(attendance).filter(n => attendance[n] === 'no')
-  const undList  = Object.keys(attendance).filter(n => attendance[n] === 'undecided')
+  const yesList = Object.keys(attendance).filter(n => attendance[n] === 'yes')
+  const noList  = Object.keys(attendance).filter(n => attendance[n] === 'no')
+  const undList = Object.keys(attendance).filter(n => attendance[n] === 'undecided')
 
   // 自分の出欠状況（管理専用・名前未登録ゲスト以外）
   const myStatus = (isManagementOnly || (isGuest && !name)) ? null : attendance[name]
@@ -69,7 +68,7 @@ export function Home({ authUser, state, isManagementOnly, isActivityEnded, onSub
         <div className="card">
           <div className="card-title">👤 ゲスト登録</div>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
-            名前と出欠を入力してください。活動日終了まで保存されます。
+            名前を入力してください。登録後にIDとパスワードを設定します。
           </p>
           <label className="login-label" style={{ marginBottom: '0.75rem' }}>
             名前
@@ -82,44 +81,17 @@ export function Home({ authUser, state, isManagementOnly, isActivityEnded, onSub
               maxLength={20}
             />
           </label>
-          <div style={{ marginTop: '0.5rem' }}>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>出欠</div>
-            <div className="fmt-group">
-              <button className={`fmt-btn ${guestStatus === 'yes' ? 'selected' : ''}`}
-                style={{ color: 'var(--accent)', borderColor: 'rgba(110,231,183,0.4)' }}
-                onClick={() => setGuestStatus('yes')}>参加</button>
-              <button className={`fmt-btn ${guestStatus === 'no' ? 'selected' : ''}`}
-                style={{ color: 'var(--red)', borderColor: 'rgba(248,113,113,0.4)' }}
-                onClick={() => setGuestStatus('no')}>不参加</button>
-              <button className={`fmt-btn ${guestStatus === 'undecided' ? 'selected' : ''}`}
-                style={{ color: 'var(--accent3)', borderColor: 'rgba(251,191,36,0.4)' }}
-                onClick={() => setGuestStatus('undecided')}>未定</button>
-            </div>
-          </div>
           {guestError && <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 6 }}>{guestError}</p>}
           <button
             className="btn btn-accent"
             style={{ marginTop: '1rem', width: '100%' }}
             onClick={() => {
               if (!guestInput.trim()) { setGuestError('名前を入力してください'); return }
-              onGuestNameRegister?.(guestInput.trim(), guestStatus)
+              onGuestRegister?.(guestInput.trim())
             }}
           >
             登録する
           </button>
-        </div>
-      )}
-
-      {/* ゲストID表示（名前登録済みゲストのみ） */}
-      {guestNamed && (
-        <div className="card" style={{ borderColor: 'rgba(110,231,183,0.2)' }}>
-          <div className="card-title">🎫 あなたのゲストID</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.08em', marginBottom: 6 }}>
-            {authUser.userId}
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
-            ログアウト後の再入場に使えます。活動日終了まで有効です。
-          </p>
         </div>
       )}
 

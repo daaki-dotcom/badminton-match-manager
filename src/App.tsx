@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import { ref, onValue } from 'firebase/database'
 import { db, ROOT } from './firebase'
 import { useFirebase } from './hooks/useFirebase'
-import { loadSession, clearSession, saveSession, loadGuestSession, saveGuestSession, clearGuestSession, generateGuestId, getGuestExpiry } from './auth'
+import { loadSession, clearSession, saveSession, generateGuestId } from './auth'
 import { Header } from './components/Header'
 import { Login } from './components/Login'
 import { PasswordChange } from './components/PasswordChange'
+import { GuestPasswordSetup } from './components/GuestPasswordSetup'
 import { Home } from './components/Home'
 import { SettingsModal } from './components/SettingsModal'
 import { Members } from './components/Members'
@@ -15,13 +16,16 @@ import { Party } from './components/Party'
 import { Admin } from './components/Admin'
 import { AuthUser, Match, AttendanceStatus, MemberLevel, PartyStatus, UserRecord } from './types'
 
+type PendingGuestSetup = { guestId: string; name: string }
+
 type Tab = 'home' | 'members' | 'matches' | 'results' | 'party' | 'admin'
 
 export default function App() {
   const [authUser, setAuthUser]         = useState<AuthUser | null>(null)
   const [authReady, setAuthReady]       = useState(false)
   const [activeTab, setActiveTab]       = useState<Tab>('home')
-  const [showSettings, setShowSettings] = useState(false)
+  const [showSettings, setShowSettings]         = useState(false)
+  const [pendingGuestSetup, setPendingGuestSetup] = useState<PendingGuestSetup | null>(null)
   // owner ロールを持つユーザーの名前一覧（試合プールから除外するために使用）
   const [managementOnlyNames, setManagementOnlyNames] = useState<string[]>([])  // 管理専用ユーザー名（出欠・試合・レベル対象外）
   const [memberNames, setMemberNames]     = useState<string[]>([])
@@ -34,11 +38,6 @@ export default function App() {
     const session = loadSession()
     if (session) {
       setAuthUser({ userId: session.userId, role: session.role, name: session.name ?? session.userId, isFirstLogin: false })
-    } else {
-      const guestSession = loadGuestSession()
-      if (guestSession) {
-        setAuthUser({ userId: guestSession.guestId, role: 'guest', name: guestSession.name, isFirstLogin: false })
-      }
     }
     setAuthReady(true)
   }, [])
@@ -179,20 +178,21 @@ export default function App() {
     fbSet('party', {})
   }
 
-  const handleGuestNameRegister = (name: string, status: AttendanceStatus) => {
+  // ゲストが名前登録フォームを送信 → パスワード設定画面へ
+  const handleGuestRegister = (name: string) => {
     const guestId = generateGuestId()
-    const expiry  = getGuestExpiry(state.activityDate)
-    saveGuestSession(guestId, name, state.activityDate)
-    fbSet(`guests/${guestId}`, { name, expiry })
-    setAuthUser(u => u ? { ...u, userId: guestId, name } : null)
-    const next = { ...state.attendance, [name]: status }
-    setState(s => ({ ...s, attendance: next }))
-    fbSet('attendance', next)
+    setPendingGuestSetup({ guestId, name })
+  }
+
+  // パスワード設定完了 → ログアウトしてログイン画面へ
+  const handleGuestSetupComplete = () => {
+    setPendingGuestSetup(null)
+    clearSession()
+    setAuthUser(null)
   }
 
   const handleLogout = () => {
     clearSession()
-    clearGuestSession()
     setAuthUser(null)
   }
 
@@ -201,6 +201,17 @@ export default function App() {
     const updated = { ...authUser, name: newName }
     setAuthUser(updated)
     saveSession(updated.userId, updated.role, newName)
+  }
+
+  // ゲスト名前登録後 → パスワード設定画面（全ハンドラ定義後に配置）
+  if (pendingGuestSetup) {
+    return (
+      <GuestPasswordSetup
+        guestId={pendingGuestSetup.guestId}
+        name={pendingGuestSetup.name}
+        onComplete={handleGuestSetupComplete}
+      />
+    )
   }
 
   return (
@@ -245,7 +256,7 @@ export default function App() {
             isManagementOnly={managementOnlyNames.includes(authUser.name)}
             isActivityEnded={isActivityEnded}
             onSubmitAttendance={handleSubmitAttendance}
-            onGuestNameRegister={handleGuestNameRegister}
+            onGuestRegister={handleGuestRegister}
             onNavigate={(tab) => setActiveTab(tab as Tab)}
           />
         )}
