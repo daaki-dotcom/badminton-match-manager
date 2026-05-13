@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ref, onValue } from 'firebase/database'
 import { db, ROOT } from './firebase'
 import { useFirebase } from './hooks/useFirebase'
-import { loadSession, clearSession, saveSession, loadGuestSession, saveGuestSession, clearGuestSession, generateGuestId } from './auth'
+import { loadSession, clearSession, saveSession, loadGuestSession, saveGuestSession, clearGuestSession, generateGuestId, getGuestExpiry } from './auth'
 import { Header } from './components/Header'
 import { Login } from './components/Login'
 import { PasswordChange } from './components/PasswordChange'
@@ -174,7 +174,9 @@ export default function App() {
 
   const handleGuestNameRegister = (name: string, status: AttendanceStatus) => {
     const guestId = generateGuestId()
+    const expiry  = getGuestExpiry(state.activityDate)
     saveGuestSession(guestId, name, state.activityDate)
+    fbSet(`guests/${guestId}`, { name, expiry })
     setAuthUser(u => u ? { ...u, userId: guestId, name } : null)
     const next = { ...state.attendance, [name]: status }
     setState(s => ({ ...s, attendance: next }))

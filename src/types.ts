@@ -60,3 +60,9 @@ export interface GuestSessionData {
   name: string
   expiry: number      // 活動日の23:59:59（ms）・期限後はIDを解放
 }
+
+// Firebase の badminton/guests/{guestId} に保存するデータ
+export interface GuestRecord {
+  name: string
+  expiry: number      // 活動日の23:59:59（ms）
+}

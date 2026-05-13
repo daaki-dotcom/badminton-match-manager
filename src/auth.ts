@@ -79,10 +79,9 @@ export function clearSession(): void {
 
 // ── ゲストセッション ────────────────────────────────
 
-// 活動日の23:59:59 をセッション有効期限とする
-// 活動日未設定の場合は当日の23:59:59
-function getEndOfDay(dateStr: string): number {
-  const base = dateStr || new Date().toISOString().split('T')[0]
+// 活動日の23:59:59 をセッション有効期限として返す（活動日未設定時は当日）
+export function getGuestExpiry(activityDate: string): number {
+  const base = activityDate || new Date().toISOString().split('T')[0]
   const d = new Date(base)
   d.setHours(23, 59, 59, 999)
   return d.getTime()
@@ -93,8 +92,14 @@ export function saveGuestSession(guestId: string, name: string, activityDate: st
   const session: GuestSessionData = {
     guestId,
     name,
-    expiry: getEndOfDay(activityDate),
+    expiry: getGuestExpiry(activityDate),
   }
+  localStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(session))
+}
+
+// Firebase から取得したゲスト情報でセッションを復元する（再入場用）
+export function restoreGuestSession(guestId: string, name: string, expiry: number): void {
+  const session: GuestSessionData = { guestId, name, expiry }
   localStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(session))
 }
 

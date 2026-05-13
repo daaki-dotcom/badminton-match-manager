@@ -101,6 +101,19 @@ export function Home({ authUser, state, isManagementOnly, onSubmitAttendance, on
         </div>
       )}
 
+      {/* ゲストID表示（名前登録済みゲストのみ） */}
+      {guestNamed && (
+        <div className="card" style={{ borderColor: 'rgba(110,231,183,0.2)' }}>
+          <div className="card-title">🎫 あなたのゲストID</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.08em', marginBottom: 6 }}>
+            {authUser.userId}
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+            ログアウト後の再入場に使えます。活動日終了まで有効です。
+          </p>
+        </div>
+      )}
+
       {/* ウェルカムカード */}
       <div className="home-welcome">
         <div className="home-greeting">

@@ -57,6 +57,7 @@ export function useFirebase() {
           fbSet('attendance',   {})
           fbSet('activityDate', '')
           fbSet('matches',      {})
+          fbSet('guests',       {})
           fbSet('party',        {})
           fbSet('paymentClub',  {})
           fbSet('paymentParty', {})
