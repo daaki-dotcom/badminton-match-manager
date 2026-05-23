@@ -68,13 +68,6 @@ export function Admin({ currentRole }: Props) {
     setTimeout(() => setDateSaved(false), 2000)
   }
 
-  const handleResetAttendance = async () => {
-    if (!confirm('出欠データをリセットしますか？（正規部員のデータも削除されます）')) return
-    await set(ref(db, `${ROOT}/attendance`), {})
-    await set(ref(db, `${ROOT}/party`), {})
-    await set(ref(db, `${ROOT}/activityDate`), '')
-  }
-
   const handleIssueId = async () => {
     const trimmedName = newName.trim()
     if (!trimmedName) { setNameError('名前を入力してください'); return }
@@ -188,14 +181,6 @@ export function Admin({ currentRole }: Props) {
           <button className="btn-primary" onClick={handleSaveDate}>設定する</button>
         </div>
         {dateSaved && <p style={{ fontSize: 12, color: 'var(--accent)', marginTop: 6 }}>✅ 活動日を設定しました</p>}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: '1rem', paddingTop: '0.75rem' }}>
-          <button className="btn-small btn-danger" onClick={handleResetAttendance}>
-            出欠データをリセット
-          </button>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>
-            出欠・懇親会・活動日をすべてクリアします
-          </span>
-        </div>
       </section>
 
       {/* 新規ID発行 */}
