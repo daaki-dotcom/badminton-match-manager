@@ -174,7 +174,8 @@ export function Admin({ currentRole }: Props) {
 
   // CSVテキストをパースして名前・レベルの配列を返す
   const parseCSV = (text: string): { rows: CsvRow[]; error: string } => {
-    const lines = text.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean)
+    // BOM除去 + 改行正規化
+    const lines = text.replace(/^﻿/, '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean)
     const rows: CsvRow[] = []
     for (const line of lines) {
       const [name, levelStr] = line.split(',').map(s => s.trim())
@@ -186,71 +187,91 @@ export function Admin({ currentRole }: Props) {
     return { rows, error: '' }
   }
 
-  const handleMemberCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  // UTF-8 / Shift-JIS 両対応でファイルを読み込む
+  const readCSVFile = (file: File, onParsed: (rows: CsvRow[], error: string) => void) => {
     const reader = new FileReader()
     reader.onload = ev => {
       const { rows, error } = parseCSV(ev.target?.result as string)
+      // 文字化け検出：置換文字(U+FFFD)が含まれていたらShift-JISで再読込
+      if (rows.some(r => r.name.includes('�'))) {
+        const r2 = new FileReader()
+        r2.onload = ev2 => {
+          const { rows: r, error: e } = parseCSV(ev2.target?.result as string)
+          onParsed(r, e)
+        }
+        r2.readAsText(file, 'Shift-JIS')
+        return
+      }
+      onParsed(rows, error)
+    }
+    reader.readAsText(file, 'UTF-8')
+  }
+
+  const handleMemberCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    readCSVFile(file, (rows, error) => {
       setMemberPreview(rows)
       setMemberCsvError(error)
       setMemberIssued([])
-    }
-    reader.readAsText(file, 'UTF-8')
+    })
     e.target.value = ''
   }
 
   const handleGuestCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      const { rows, error } = parseCSV(ev.target?.result as string)
+    readCSVFile(file, (rows, error) => {
       setGuestPreview(rows)
       setGuestCsvError(error)
       setGuestIssued([])
-    }
-    reader.readAsText(file, 'UTF-8')
+    })
     e.target.value = ''
   }
 
   const handleBulkIssueMember = async () => {
     setMemberBulkLoading(true)
-    const hash = await hashPassword(INITIAL_PASSWORD)
-    const issued: IssuedRow[] = []
-    for (const row of memberPreview) {
-      const id = generateRandomId()
-      await set(ref(db, `${ROOT}/users/${id}`), {
-        passwordHash: hash,
-        role: 'member',
-        isFirstLogin: true,
-        name: row.name,
-        level: row.level,
-      } satisfies UserRecord)
-      issued.push({ name: row.name, id, level: row.level })
+    try {
+      const hash = await hashPassword(INITIAL_PASSWORD)
+      const issued: IssuedRow[] = []
+      for (const row of memberPreview) {
+        const id = generateRandomId()
+        await set(ref(db, `${ROOT}/users/${id}`), {
+          passwordHash: hash,
+          role: 'member',
+          isFirstLogin: true,
+          name: row.name,
+          level: row.level,
+        } satisfies UserRecord)
+        issued.push({ name: row.name, id, level: row.level })
+      }
+      setMemberIssued(issued)
+      setMemberPreview([])
+      await fetchUsers()
+    } finally {
+      setMemberBulkLoading(false)
     }
-    setMemberIssued(issued)
-    setMemberPreview([])
-    setMemberBulkLoading(false)
-    await fetchUsers()
   }
 
   const handleBulkIssueGuest = async () => {
     setGuestBulkLoading(true)
-    const hash = await hashPassword(INITIAL_PASSWORD)
-    const issued: IssuedRow[] = []
-    for (const row of guestPreview) {
-      const id = generateGuestId()
-      await set(ref(db, `${ROOT}/guestUsers/${id}`), {
-        passwordHash: hash,
-        name: row.name,
-      } satisfies GuestUserRecord)
-      await set(ref(db, `${ROOT}/attendance/${row.name}`), 'yes')
-      issued.push({ name: row.name, id, level: row.level })
+    try {
+      const hash = await hashPassword(INITIAL_PASSWORD)
+      const issued: IssuedRow[] = []
+      for (const row of guestPreview) {
+        const id = generateGuestId()
+        await set(ref(db, `${ROOT}/guestUsers/${id}`), {
+          passwordHash: hash,
+          name: row.name,
+        } satisfies GuestUserRecord)
+        await set(ref(db, `${ROOT}/attendance/${row.name}`), 'yes')
+        issued.push({ name: row.name, id, level: row.level })
+      }
+      setGuestIssued(issued)
+      setGuestPreview([])
+    } finally {
+      setGuestBulkLoading(false)
     }
-    setGuestIssued(issued)
-    setGuestPreview([])
-    setGuestBulkLoading(false)
   }
 
   const copyRow = (row: IssuedRow, type: 'member' | 'guest') => {
