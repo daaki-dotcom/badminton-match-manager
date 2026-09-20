@@ -65,6 +65,12 @@ export default function App() {
     return () => unsub()
   }, [])
 
+  // ログイン成立時（通常ログイン・初回PW変更完了）→ タブをホームに戻す
+  const handleLoginComplete = (user: AuthUser) => {
+    setAuthUser(user)
+    setActiveTab('home')
+  }
+
   // Firebase 接続待ち または セッション確認前
   if (!authReady || loading) {
     return (
@@ -77,12 +83,12 @@ export default function App() {
 
   // 未ログイン → ログイン画面を表示
   if (!authUser) {
-    return <Login onLogin={setAuthUser} />
+    return <Login onLogin={handleLoginComplete} />
   }
 
   // 初回ログイン → パスワード変更を強制
   if (authUser.isFirstLogin) {
-    return <PasswordChange user={authUser} onComplete={setAuthUser} />
+    return <PasswordChange user={authUser} onComplete={handleLoginComplete} />
   }
 
   const role = authUser.role
@@ -195,6 +201,7 @@ export default function App() {
   const handleLogout = () => {
     clearSession()
     setAuthUser(null)
+    setActiveTab('home')
   }
 
   const handleNameChange = (newName: string) => {
