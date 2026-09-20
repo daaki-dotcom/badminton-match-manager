@@ -4,7 +4,7 @@ interface LinkItem {
 }
 
 const LINKS: LinkItem[] = [
-  { label: 'BOLD BADMINTON CLUB', url: 'https://tomin-ai-sandbox.github.io/bold-badminton-club/' },
+  { label: 'バド部に関する表示はこちら', url: 'https://tomin-ai-sandbox.github.io/bold-badminton-club/' },
 ]
 
 export function Footer() {
