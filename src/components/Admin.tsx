@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ref, get, set, remove, update, onValue } from 'firebase/database'
 import { db, ROOT } from '../firebase'
 import { hashPassword, generateGuestId } from '../auth'
-import { UserRecord, GuestUserRecord, MemberLevel } from '../types'
+import { UserRecord, GuestUserRecord, MemberLevel, AttendanceStatus } from '../types'
 
 const INITIAL_PASSWORD = 'nicesoul'
 const MAX_ADMIN = 4
@@ -56,6 +56,19 @@ export function Admin({ currentRole }: Props) {
   const [guestBulkLoading, setGuestBulkLoading] = useState(false)
   const [copiedGuestId,  setCopiedGuestId]  = useState<string | null>(null)
   const [copiedAllGuest, setCopiedAllGuest] = useState(false)
+
+  // 調整さん 出欠一括登録
+  type ChouseisanCsvRow = { name: string; attendance: AttendanceStatus }
+  type ChouseisanAction = 'register' | 'skip-existing-member' | 'skip-existing-guest' | 'skip-similar-name' | 'skip-not-yes'
+  type ChouseisanPreviewRow = ChouseisanCsvRow & { action: ChouseisanAction; similarName?: string }
+  type ChouseisanIssuedRow = { name: string; id: string }
+  const [chouseisanPreview, setChouseisanPreview] = useState<ChouseisanPreviewRow[]>([])
+  const [chouseisanIssued,  setChouseisanIssued]  = useState<ChouseisanIssuedRow[]>([])
+  const [chouseisanDone,    setChouseisanDone]    = useState(false)
+  const [chouseisanError,   setChouseisanError]   = useState('')
+  const [chouseisanBulkLoading, setChouseisanBulkLoading] = useState(false)
+  const [copiedChouseisanId,  setCopiedChouseisanId]  = useState<string | null>(null)
+  const [copiedAllChouseisan, setCopiedAllChouseisan] = useState(false)
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -274,6 +287,181 @@ export function Admin({ currentRole }: Props) {
     }
   }
 
+  // 出欠記号 → AttendanceStatus
+  const parseAttendanceSymbol = (symbol: string | undefined): AttendanceStatus => {
+    const s = (symbol ?? '').trim()
+    if (s === '◯' || s === '○') return 'yes'
+    if (s === '×' || s === '✕') return 'no'
+    if (s === '△') return 'undecided'
+    return ''
+  }
+
+  // 調整さんCSVをパースする（ヘッダー行より前の行程紹介文は読み飛ばし、活動日に一致する出欠列だけを取得する）
+  const parseChouseisanCSV = (text: string, activityDateStr: string): { rows: ChouseisanCsvRow[]; error: string } => {
+    const rawLines = text.replace(/^﻿/, '').replace(/\r/g, '').split('\n')
+
+    const headerIndex = rawLines.findIndex(line => line.split(',')[0]?.trim() === '参加者')
+    if (headerIndex === -1) {
+      return { rows: [], error: '調整さんのCSV形式が確認できませんでした（「参加者」列を含むヘッダー行が見つかりません）' }
+    }
+    const headerCols = rawLines[headerIndex].split(',').map(s => s.trim())
+    const dateCols = headerCols.slice(1, headerCols.length - 1)  // 1列目=名前, 最終列=コメント の間が日付列
+
+    const [, mm, dd] = activityDateStr.split('-').map(s => s.replace(/^0/, ''))
+    let targetOffset = -1
+    for (let i = 0; i < dateCols.length; i++) {
+      const m = dateCols[i].match(/^(\d{1,2})\/(\d{1,2})/)
+      if (m && m[1] === mm && m[2] === dd) { targetOffset = i + 1; break }
+    }
+    if (targetOffset === -1) {
+      return { rows: [], error: 'DATE_COLUMN_NOT_FOUND' }
+    }
+
+    const rows: ChouseisanCsvRow[] = []
+    for (let i = headerIndex + 1; i < rawLines.length; i++) {
+      const line = rawLines[i].trim()
+      if (!line) continue
+      const fields = line.split(',').map(s => s.trim())
+      const name = fields[0]
+      if (!name) continue
+      rows.push({ name, attendance: parseAttendanceSymbol(fields[targetOffset]) })
+    }
+    if (rows.length === 0) return { rows: [], error: '有効なデータが見つかりませんでした' }
+    return { rows, error: '' }
+  }
+
+  // UTF-8 / Shift-JIS 両対応で調整さんCSVを読み込む
+  const readChouseisanCSVFile = (
+    file: File, activityDateStr: string,
+    onParsed: (rows: ChouseisanCsvRow[], error: string) => void,
+  ) => {
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const text = ev.target?.result as string
+      // 文字化け検出（置換文字 U+FFFD）：Shift-JISで再読込
+      if (text.includes('�')) {
+        const r2 = new FileReader()
+        r2.onload = ev2 => {
+          const { rows, error } = parseChouseisanCSV(ev2.target?.result as string, activityDateStr)
+          onParsed(rows, error)
+        }
+        r2.readAsText(file, 'Shift-JIS')
+        return
+      }
+      const { rows, error } = parseChouseisanCSV(text, activityDateStr)
+      onParsed(rows, error)
+    }
+    reader.readAsText(file, 'UTF-8')
+  }
+
+  const handleChouseisanCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
+    if (!activityDate) {
+      const msg = '活動日が設定されていません。先に「活動日設定」で活動日を登録してください。'
+      alert(msg)
+      setChouseisanError(msg)
+      setChouseisanPreview([])
+      setChouseisanDone(false)
+      return
+    }
+
+    readChouseisanCSVFile(file, activityDate, async (rows, error) => {
+      if (error === 'DATE_COLUMN_NOT_FOUND') {
+        const [, mm, dd] = activityDate.split('-').map(s => s.replace(/^0/, ''))
+        const msg = `活動日（${mm}/${dd}）に一致する出欠列がCSVに見つかりませんでした。`
+        alert(msg)
+        setChouseisanError(msg)
+        setChouseisanPreview([])
+        setChouseisanDone(false)
+        return
+      }
+      if (error) {
+        setChouseisanError(error)
+        setChouseisanPreview([])
+        setChouseisanDone(false)
+        return
+      }
+      setChouseisanError('')
+      setChouseisanDone(false)
+      setChouseisanIssued([])
+
+      const guestSnap = await get(ref(db, `${ROOT}/guestUsers`))
+      const guestNames = guestSnap.exists()
+        ? Object.values(guestSnap.val() as Record<string, GuestUserRecord>).map(g => g.name)
+        : []
+      const normalize = (s: string) => s.replace(/[ 　]/g, '')
+
+      const preview: ChouseisanPreviewRow[] = rows.map(row => {
+        if (users.some(u => u.record.name === row.name)) {
+          return { ...row, action: 'skip-existing-member' }
+        }
+        const similar = users.find(u => u.record.name && u.record.name !== row.name && normalize(u.record.name) === normalize(row.name))
+        if (similar) {
+          return { ...row, action: 'skip-similar-name', similarName: similar.record.name }
+        }
+        if (guestNames.includes(row.name)) {
+          return { ...row, action: 'skip-existing-guest' }
+        }
+        if (row.attendance !== 'yes') {
+          return { ...row, action: 'skip-not-yes' }
+        }
+        return { ...row, action: 'register' }
+      })
+      setChouseisanPreview(preview)
+    })
+  }
+
+  const chouseisanReasonText = (row: ChouseisanPreviewRow): string => {
+    switch (row.action) {
+      case 'skip-existing-member': return '既に登録済みのため未登録（正規部員）'
+      case 'skip-existing-guest':  return '既に登録済みのため未登録（ゲスト）'
+      case 'skip-similar-name':    return `正規部員「${row.similarName}」と表記が似ているため要確認（自動登録していません）`
+      case 'skip-not-yes':
+        if (row.attendance === 'no') return '不参加のため未登録'
+        if (row.attendance === 'undecided') return '未定のため未登録'
+        return '出欠が未回答のため未登録'
+      default: return ''
+    }
+  }
+
+  const handleBulkIssueChouseisan = async () => {
+    setChouseisanBulkLoading(true)
+    try {
+      const hash = await hashPassword(INITIAL_PASSWORD)
+      const issued: ChouseisanIssuedRow[] = []
+      for (const row of chouseisanPreview) {
+        if (row.action !== 'register') continue
+        const id = generateGuestId()
+        await set(ref(db, `${ROOT}/guestUsers/${id}`), {
+          passwordHash: hash,
+          name: row.name,
+        } satisfies GuestUserRecord)
+        await set(ref(db, `${ROOT}/attendance/${row.name}`), 'yes')
+        issued.push({ name: row.name, id })
+      }
+      setChouseisanIssued(issued)
+      setChouseisanDone(true)
+    } finally {
+      setChouseisanBulkLoading(false)
+    }
+  }
+
+  const copyChouseisanRow = (row: ChouseisanIssuedRow) => {
+    navigator.clipboard.writeText(`${row.name}  ID: ${row.id}  PW: ${INITIAL_PASSWORD}`)
+    setCopiedChouseisanId(row.id)
+    setTimeout(() => setCopiedChouseisanId(null), 2000)
+  }
+
+  const copyAllChouseisanRows = () => {
+    const text = chouseisanIssued.map(r => `${r.name}  ID: ${r.id}  PW: ${INITIAL_PASSWORD}`).join('\n')
+    navigator.clipboard.writeText(text)
+    setCopiedAllChouseisan(true)
+    setTimeout(() => setCopiedAllChouseisan(false), 2000)
+  }
+
   const copyRow = (row: IssuedRow, type: 'member' | 'guest') => {
     navigator.clipboard.writeText(`${row.name}  ID: ${row.id}  PW: ${INITIAL_PASSWORD}`)
     if (type === 'member') { setCopiedMemberId(row.id); setTimeout(() => setCopiedMemberId(null), 2000) }
@@ -450,6 +638,89 @@ export function Admin({ currentRole }: Props) {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </section>
+
+      {/* 調整さん 出欠一括登録（CSV） */}
+      <section className="admin-section">
+        <h3 className="admin-subtitle">調整さん 出欠一括登録（CSV）</h3>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
+          調整さんから書き出したCSVをそのまま読み込みます。活動日設定の日付と一致する出欠列（◯/△/×）を自動判定し、
+          未登録かつ◯（出席）の人のみゲストとして新規登録します（レベルは未経験者、既存の正規部員・ゲストと同名の人は登録しません）。
+        </p>
+        <input type="file" accept=".csv" onChange={handleChouseisanCSV} style={{ fontSize: 13 }} />
+        {chouseisanError && <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>{chouseisanError}</p>}
+
+        {!chouseisanDone && chouseisanPreview.length > 0 && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+              プレビュー（{chouseisanPreview.length}件中 {chouseisanPreview.filter(r => r.action === 'register').length}件を新規登録予定）
+            </p>
+            <table className="admin-table">
+              <thead><tr><th>名前</th><th>出欠</th><th>判定</th></tr></thead>
+              <tbody>
+                {chouseisanPreview.map((r, i) => (
+                  <tr key={i} style={{ opacity: r.action === 'register' ? 1 : 0.55 }}>
+                    <td>{r.name}</td>
+                    <td>{r.attendance === 'yes' ? '◯' : r.attendance === 'no' ? '×' : r.attendance === 'undecided' ? '△' : '—'}</td>
+                    <td style={{ fontSize: 12 }}>{r.action === 'register' ? '新規登録予定' : chouseisanReasonText(r)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button className="btn-primary" style={{ marginTop: '0.75rem' }}
+              onClick={handleBulkIssueChouseisan} disabled={chouseisanBulkLoading || chouseisanPreview.every(r => r.action !== 'register')}>
+              {chouseisanBulkLoading ? '発行中...' : `${chouseisanPreview.filter(r => r.action === 'register').length}人を一括発行する`}
+            </button>
+          </div>
+        )}
+
+        {chouseisanDone && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <p style={{ fontSize: 12, color: 'var(--accent)' }}>✅ {chouseisanIssued.length}件 発行完了</p>
+              {chouseisanIssued.length > 0 && (
+                <button className="btn-copy" onClick={copyAllChouseisanRows}>
+                  {copiedAllChouseisan ? 'コピーしました！' : '全部コピー'}
+                </button>
+              )}
+            </div>
+            {chouseisanIssued.length > 0 && (
+              <table className="admin-table">
+                <thead><tr><th>名前</th><th>ID</th><th>PW</th><th></th></tr></thead>
+                <tbody>
+                  {chouseisanIssued.map(r => (
+                    <tr key={r.id}>
+                      <td>{r.name}</td>
+                      <td className="admin-id">{r.id}</td>
+                      <td>{INITIAL_PASSWORD}</td>
+                      <td>
+                        <button className="btn-small" onClick={() => copyChouseisanRow(r)}>
+                          {copiedChouseisanId === r.id ? '✅' : 'コピー'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {chouseisanPreview.some(r => r.action !== 'register') && (
+              <div style={{ marginTop: '0.75rem' }}>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+                  登録されなかった人（{chouseisanPreview.filter(r => r.action !== 'register').length}件）
+                </p>
+                <table className="admin-table">
+                  <thead><tr><th>名前</th><th>理由</th></tr></thead>
+                  <tbody>
+                    {chouseisanPreview.filter(r => r.action !== 'register').map((r, i) => (
+                      <tr key={i}><td>{r.name}</td><td style={{ fontSize: 12 }}>{chouseisanReasonText(r)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </section>
