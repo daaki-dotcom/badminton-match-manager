@@ -14,6 +14,7 @@ import { Matches } from './components/Matches'
 import { Results } from './components/Results'
 import { Party } from './components/Party'
 import { Admin } from './components/Admin'
+import { Footer } from './components/Footer'
 import { AuthUser, Match, AttendanceStatus, MemberLevel, PartyStatus, UserRecord } from './types'
 
 type PendingGuestSetup = { guestId: string; name: string }
@@ -317,6 +318,8 @@ export default function App() {
           <Admin currentRole={role} />
         )}
       </main>
+
+      <Footer />
     </>
   )
 }
