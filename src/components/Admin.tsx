@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { ref, get, set, remove, update, onValue } from 'firebase/database'
 import { db, ROOT } from '../firebase'
-import { hashPassword } from '../auth'
-import { UserRecord } from '../types'
+import { hashPassword, generateGuestId } from '../auth'
+import { UserRecord, GuestUserRecord, MemberLevel } from '../types'
 
 const INITIAL_PASSWORD = 'nicesoul'
 const MAX_ADMIN = 4
@@ -39,6 +39,24 @@ export function Admin({ currentRole }: Props) {
   const [dateInput, setDateInput]         = useState('')
   const [dateSaved, setDateSaved]         = useState(false)
 
+  // 正規部員 一括登録
+  type CsvRow    = { name: string; level: MemberLevel }
+  type IssuedRow = { name: string; id: string; level: MemberLevel }
+  const [memberPreview,  setMemberPreview]  = useState<CsvRow[]>([])
+  const [memberIssued,   setMemberIssued]   = useState<IssuedRow[]>([])
+  const [memberCsvError, setMemberCsvError] = useState('')
+  const [memberBulkLoading, setMemberBulkLoading] = useState(false)
+  const [copiedMemberId,  setCopiedMemberId]  = useState<string | null>(null)
+  const [copiedAllMember, setCopiedAllMember] = useState(false)
+
+  // ゲスト 一括登録
+  const [guestPreview,  setGuestPreview]  = useState<CsvRow[]>([])
+  const [guestIssued,   setGuestIssued]   = useState<IssuedRow[]>([])
+  const [guestCsvError, setGuestCsvError] = useState('')
+  const [guestBulkLoading, setGuestBulkLoading] = useState(false)
+  const [copiedGuestId,  setCopiedGuestId]  = useState<string | null>(null)
+  const [copiedAllGuest, setCopiedAllGuest] = useState(false)
+
   const fetchUsers = async () => {
     setLoading(true)
     const snap = await get(ref(db, `${ROOT}/users`))
@@ -66,13 +84,6 @@ export function Admin({ currentRole }: Props) {
     await set(ref(db, `${ROOT}/activityDate`), dateInput)
     setDateSaved(true)
     setTimeout(() => setDateSaved(false), 2000)
-  }
-
-  const handleResetAttendance = async () => {
-    if (!confirm('出欠データをリセットしますか？（正規部員のデータも削除されます）')) return
-    await set(ref(db, `${ROOT}/attendance`), {})
-    await set(ref(db, `${ROOT}/party`), {})
-    await set(ref(db, `${ROOT}/activityDate`), '')
   }
 
   const handleIssueId = async () => {
@@ -161,6 +172,121 @@ export function Admin({ currentRole }: Props) {
     await fetchUsers()
   }
 
+  // CSVテキストをパースして名前・レベルの配列を返す
+  const parseCSV = (text: string): { rows: CsvRow[]; error: string } => {
+    // BOM除去 + 改行正規化
+    const lines = text.replace(/^﻿/, '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean)
+    const rows: CsvRow[] = []
+    for (const line of lines) {
+      const [name, levelStr] = line.split(',').map(s => s.trim())
+      if (!name || name === '名前') continue
+      const level: MemberLevel = levelStr === '経験者' ? 'exp' : 'nov'
+      rows.push({ name, level })
+    }
+    if (rows.length === 0) return { rows: [], error: '有効なデータが見つかりませんでした' }
+    return { rows, error: '' }
+  }
+
+  // UTF-8 / Shift-JIS 両対応でファイルを読み込む
+  const readCSVFile = (file: File, onParsed: (rows: CsvRow[], error: string) => void) => {
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const { rows, error } = parseCSV(ev.target?.result as string)
+      // 文字化け検出：置換文字(U+FFFD)が含まれていたらShift-JISで再読込
+      if (rows.some(r => r.name.includes('�'))) {
+        const r2 = new FileReader()
+        r2.onload = ev2 => {
+          const { rows: r, error: e } = parseCSV(ev2.target?.result as string)
+          onParsed(r, e)
+        }
+        r2.readAsText(file, 'Shift-JIS')
+        return
+      }
+      onParsed(rows, error)
+    }
+    reader.readAsText(file, 'UTF-8')
+  }
+
+  const handleMemberCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    readCSVFile(file, (rows, error) => {
+      setMemberPreview(rows)
+      setMemberCsvError(error)
+      setMemberIssued([])
+    })
+    e.target.value = ''
+  }
+
+  const handleGuestCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    readCSVFile(file, (rows, error) => {
+      setGuestPreview(rows)
+      setGuestCsvError(error)
+      setGuestIssued([])
+    })
+    e.target.value = ''
+  }
+
+  const handleBulkIssueMember = async () => {
+    setMemberBulkLoading(true)
+    try {
+      const hash = await hashPassword(INITIAL_PASSWORD)
+      const issued: IssuedRow[] = []
+      for (const row of memberPreview) {
+        const id = generateRandomId()
+        await set(ref(db, `${ROOT}/users/${id}`), {
+          passwordHash: hash,
+          role: 'member',
+          isFirstLogin: true,
+          name: row.name,
+          level: row.level,
+        } satisfies UserRecord)
+        issued.push({ name: row.name, id, level: row.level })
+      }
+      setMemberIssued(issued)
+      setMemberPreview([])
+      await fetchUsers()
+    } finally {
+      setMemberBulkLoading(false)
+    }
+  }
+
+  const handleBulkIssueGuest = async () => {
+    setGuestBulkLoading(true)
+    try {
+      const hash = await hashPassword(INITIAL_PASSWORD)
+      const issued: IssuedRow[] = []
+      for (const row of guestPreview) {
+        const id = generateGuestId()
+        await set(ref(db, `${ROOT}/guestUsers/${id}`), {
+          passwordHash: hash,
+          name: row.name,
+        } satisfies GuestUserRecord)
+        await set(ref(db, `${ROOT}/attendance/${row.name}`), 'yes')
+        issued.push({ name: row.name, id, level: row.level })
+      }
+      setGuestIssued(issued)
+      setGuestPreview([])
+    } finally {
+      setGuestBulkLoading(false)
+    }
+  }
+
+  const copyRow = (row: IssuedRow, type: 'member' | 'guest') => {
+    navigator.clipboard.writeText(`${row.name}  ID: ${row.id}  PW: ${INITIAL_PASSWORD}`)
+    if (type === 'member') { setCopiedMemberId(row.id); setTimeout(() => setCopiedMemberId(null), 2000) }
+    else                   { setCopiedGuestId(row.id);  setTimeout(() => setCopiedGuestId(null),  2000) }
+  }
+
+  const copyAll = (issued: IssuedRow[], type: 'member' | 'guest') => {
+    const text = issued.map(r => `${r.name}  ID: ${r.id}  PW: ${INITIAL_PASSWORD}`).join('\n')
+    navigator.clipboard.writeText(text)
+    if (type === 'member') { setCopiedAllMember(true); setTimeout(() => setCopiedAllMember(false), 2000) }
+    else                   { setCopiedAllGuest(true);  setTimeout(() => setCopiedAllGuest(false),  2000) }
+  }
+
   const handleDelete = async (entry: UserEntry) => {
     if (!confirm(`${entry.record.name ?? entry.id} を削除しますか？`)) return
     await remove(ref(db, `${ROOT}/users/${entry.id}`))
@@ -188,14 +314,6 @@ export function Admin({ currentRole }: Props) {
           <button className="btn-primary" onClick={handleSaveDate}>設定する</button>
         </div>
         {dateSaved && <p style={{ fontSize: 12, color: 'var(--accent)', marginTop: 6 }}>✅ 活動日を設定しました</p>}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: '1rem', paddingTop: '0.75rem' }}>
-          <button className="btn-small btn-danger" onClick={handleResetAttendance}>
-            出欠データをリセット
-          </button>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>
-            出欠・懇親会・活動日をすべてクリアします
-          </span>
-        </div>
       </section>
 
       {/* 新規ID発行 */}
@@ -218,6 +336,120 @@ export function Admin({ currentRole }: Props) {
             <button className="btn-copy" onClick={handleCopy}>
               {copied ? 'コピーしました！' : 'コピーする（ID / 初期PW）'}
             </button>
+          </div>
+        )}
+      </section>
+
+      {/* 正規部員 一括登録 */}
+      <section className="admin-section">
+        <h3 className="admin-subtitle">正規部員 一括登録（CSV）</h3>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
+          フォーマット：<code>名前,レベル</code>（レベルは「経験者」「未経験者」、省略時は未経験者）
+        </p>
+        <input type="file" accept=".csv" onChange={handleMemberCSV} style={{ fontSize: 13 }} />
+        {memberCsvError && <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>{memberCsvError}</p>}
+
+        {memberPreview.length > 0 && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>プレビュー（{memberPreview.length}件）</p>
+            <table className="admin-table">
+              <thead><tr><th>名前</th><th>レベル</th></tr></thead>
+              <tbody>
+                {memberPreview.map((r, i) => (
+                  <tr key={i}><td>{r.name}</td><td>{r.level === 'exp' ? '経験者' : '未経験者'}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <button className="btn-primary" style={{ marginTop: '0.75rem' }}
+              onClick={handleBulkIssueMember} disabled={memberBulkLoading}>
+              {memberBulkLoading ? '発行中...' : `${memberPreview.length}人を一括発行する`}
+            </button>
+          </div>
+        )}
+
+        {memberIssued.length > 0 && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <p style={{ fontSize: 12, color: 'var(--accent)' }}>✅ {memberIssued.length}件 発行完了</p>
+              <button className="btn-copy" onClick={() => copyAll(memberIssued, 'member')}>
+                {copiedAllMember ? 'コピーしました！' : '全部コピー'}
+              </button>
+            </div>
+            <table className="admin-table">
+              <thead><tr><th>名前</th><th>レベル</th><th>ID</th><th>PW</th><th></th></tr></thead>
+              <tbody>
+                {memberIssued.map(r => (
+                  <tr key={r.id}>
+                    <td>{r.name}</td>
+                    <td>{r.level === 'exp' ? '経験者' : '未経験者'}</td>
+                    <td className="admin-id">{r.id}</td>
+                    <td>{INITIAL_PASSWORD}</td>
+                    <td>
+                      <button className="btn-small" onClick={() => copyRow(r, 'member')}>
+                        {copiedMemberId === r.id ? '✅' : 'コピー'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* ゲスト 一括登録 */}
+      <section className="admin-section">
+        <h3 className="admin-subtitle">ゲスト 一括登録（CSV）</h3>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
+          フォーマット：<code>名前,レベル</code>（活動日終了後に自動削除）
+        </p>
+        <input type="file" accept=".csv" onChange={handleGuestCSV} style={{ fontSize: 13 }} />
+        {guestCsvError && <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>{guestCsvError}</p>}
+
+        {guestPreview.length > 0 && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>プレビュー（{guestPreview.length}件）</p>
+            <table className="admin-table">
+              <thead><tr><th>名前</th><th>レベル</th></tr></thead>
+              <tbody>
+                {guestPreview.map((r, i) => (
+                  <tr key={i}><td>{r.name}</td><td>{r.level === 'exp' ? '経験者' : '未経験者'}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <button className="btn-primary" style={{ marginTop: '0.75rem' }}
+              onClick={handleBulkIssueGuest} disabled={guestBulkLoading}>
+              {guestBulkLoading ? '発行中...' : `${guestPreview.length}人を一括発行する`}
+            </button>
+          </div>
+        )}
+
+        {guestIssued.length > 0 && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <p style={{ fontSize: 12, color: 'var(--accent)' }}>✅ {guestIssued.length}件 発行完了</p>
+              <button className="btn-copy" onClick={() => copyAll(guestIssued, 'guest')}>
+                {copiedAllGuest ? 'コピーしました！' : '全部コピー'}
+              </button>
+            </div>
+            <table className="admin-table">
+              <thead><tr><th>名前</th><th>レベル</th><th>ID</th><th>PW</th><th></th></tr></thead>
+              <tbody>
+                {guestIssued.map(r => (
+                  <tr key={r.id}>
+                    <td>{r.name}</td>
+                    <td>{r.level === 'exp' ? '経験者' : '未経験者'}</td>
+                    <td className="admin-id">{r.id}</td>
+                    <td>{INITIAL_PASSWORD}</td>
+                    <td>
+                      <button className="btn-small" onClick={() => copyRow(r, 'guest')}>
+                        {copiedGuestId === r.id ? '✅' : 'コピー'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
