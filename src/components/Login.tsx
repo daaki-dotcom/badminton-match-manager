@@ -3,6 +3,7 @@ import { ref, get, set } from 'firebase/database'
 import { db, ROOT } from '../firebase'
 import { loginWithId, loginAsGuest, hashPassword } from '../auth'
 import { AuthUser, UserRecord } from '../types'
+import { ScheduleForm } from './ScheduleForm'
 
 interface Props {
   onLogin: (user: AuthUser) => void
@@ -19,6 +20,7 @@ export function Login({ onLogin }: Props) {
   const [error, setError]         = useState('')
   const [loading, setLoading]     = useState(false)
   const [checking, setChecking]   = useState(true)
+  const [showSchedule, setShowSchedule] = useState(false)
 
   // 初回セットアップ用
   const [isSetup, setIsSetup]       = useState(false)
@@ -74,11 +76,23 @@ export function Login({ onLogin }: Props) {
 
     setLoading(true)
     setError('')
-    const user = await loginWithId(userId.trim(), password)
-    setLoading(false)
+    try {
+      const user = await loginWithId(userId.trim(), password)
+      setLoading(false)
+      if (!user) { setError('IDまたはパスワードが正しくありません'); return }
+      onLogin(user)
+    } catch (err) {
+      setLoading(false)
+      if (err instanceof Error && err.message === 'PENDING_ID') {
+        setError('この参加者IDは、活動日が確定するまでログインできません。')
+      } else {
+        setError('ログインに失敗しました。時間をおいて再度お試しください。')
+      }
+    }
+  }
 
-    if (!user) { setError('IDまたはパスワードが正しくありません'); return }
-    onLogin(user)
+  if (showSchedule) {
+    return <ScheduleForm onBack={() => setShowSchedule(false)} />
   }
 
   if (checking) {
@@ -175,6 +189,10 @@ export function Login({ onLogin }: Props) {
 
         <button className="login-btn-guest" type="button" onClick={() => onLogin(loginAsGuest())}>
           ゲストとして入場する（閲覧のみ）
+        </button>
+
+        <button className="login-btn-guest" type="button" style={{ marginTop: 8 }} onClick={() => setShowSchedule(true)}>
+          📝 出欠を回答する（ログイン不要）
         </button>
 
         <p className="login-guest-note">参加登録はホーム画面から行えます</p>

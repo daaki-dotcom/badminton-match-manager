@@ -58,4 +58,24 @@ export interface SessionData {
 export interface GuestUserRecord {
   passwordHash: string
   name: string
+  pending?: boolean  // true = 複数候補日モードで発行された仮ID（活動日確定までログイン不可）
+}
+
+// ── 調整機能（出欠回答フォーム） ──────────────────────────────────
+
+export type ChouseisanMode = 'single' | 'multi'
+
+// フォームで回答された1件（正規部員・ゲスト・✕/△の回答者も含めて内部管理する）
+export interface ChouseisanEntry {
+  id: string                                // 内部識別子（同姓同名の別人がいる場合の区別にも使う）
+  name: string                              // 入力された名前（表示用、正規化前）
+  memberType: 'member' | 'guest'
+  level: MemberLevel
+  comment: string
+  mode: ChouseisanMode
+  answers: Record<string, AttendanceStatus> // 単一日程モードはキー 'single' のみ、複数候補日モードは日付文字列がキー
+  linkedUserId?: string                     // 正規部員として照合できた場合の users/{id}
+  linkedGuestId?: string                    // このフォーム経由でゲストIDを発行した場合
+  createdAt: number
+  updatedAt: number
 }

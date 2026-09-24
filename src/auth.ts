@@ -16,6 +16,7 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 // users → guestUsers の順で照合し AuthUser を返す
+// pending な仮IDの場合は null ではなく例外的に 'pending' 文字列を投げて呼び出し側に伝える
 export async function loginWithId(userId: string, password: string): Promise<AuthUser | null> {
   const inputHash = await hashPassword(password)
 
@@ -39,6 +40,7 @@ export async function loginWithId(userId: string, password: string): Promise<Aut
   if (guestSnap.exists()) {
     const record = guestSnap.val() as GuestUserRecord
     if (inputHash !== record.passwordHash) return null
+    if (record.pending) throw new Error('PENDING_ID')
     const user: AuthUser = {
       userId,
       role: 'guest',
