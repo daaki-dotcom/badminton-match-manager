@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ref, onValue, push, set, update } from 'firebase/database'
 import { db, ROOT } from '../firebase'
-import { hashPassword, generateGuestId } from '../auth'
+import { hashPassword, generateGuestId, createAuthAccount } from '../auth'
 import { ChouseisanEntry, AttendanceStatus, MemberLevel, UserRecord, GuestUserRecord } from '../types'
 
 const INITIAL_PASSWORD = 'nicesoul'
@@ -102,6 +102,7 @@ export function ScheduleForm({ onBack }: Props) {
         await update(ref(db, `${ROOT}/memberLevels`), { [name.trim()]: level })
         if (finalAnswers.single === 'yes') {
           const guestId = generateGuestId()
+          await createAuthAccount(guestId, INITIAL_PASSWORD)
           const hash = await hashPassword(INITIAL_PASSWORD)
           await set(ref(db, `${ROOT}/guestUsers/${guestId}`), {
             passwordHash: hash, name: name.trim(),
@@ -116,6 +117,7 @@ export function ScheduleForm({ onBack }: Props) {
         const anyYes = Object.values(finalAnswers).some(a => a === 'yes')
         if (anyYes) {
           const guestId = generateGuestId()
+          await createAuthAccount(guestId, INITIAL_PASSWORD)
           const hash = await hashPassword(INITIAL_PASSWORD)
           await set(ref(db, `${ROOT}/guestUsers/${guestId}`), {
             passwordHash: hash, name: name.trim(), pending: true,

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ref, set } from 'firebase/database'
 import { db, ROOT } from '../firebase'
-import { hashPassword } from '../auth'
+import { hashPassword, createAuthAccount } from '../auth'
 import { GuestUserRecord } from '../types'
 
 interface Props {
@@ -19,19 +19,25 @@ export function GuestPasswordSetup({ guestId, name, onComplete }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password.length < 4) { setError('パスワードは4文字以上で設定してください'); return }
+    if (password.length < 6) { setError('パスワードは6文字以上で設定してください'); return }
     if (password !== confirm)  { setError('パスワードが一致しません'); return }
 
     setLoading(true)
-    const hash = await hashPassword(password)
-    await set(ref(db, `${ROOT}/guestUsers/${guestId}`), {
-      passwordHash: hash,
-      name,
-    } satisfies GuestUserRecord)
-    // 参加者一覧に表示されるよう出欠を「参加」で初期化する
-    await set(ref(db, `${ROOT}/attendance/${name}`), 'yes')
-    setLoading(false)
-    onComplete()
+    try {
+      await createAuthAccount(guestId, password)
+      const hash = await hashPassword(password)
+      await set(ref(db, `${ROOT}/guestUsers/${guestId}`), {
+        passwordHash: hash,
+        name,
+      } satisfies GuestUserRecord)
+      // 参加者一覧に表示されるよう出欠を「参加」で初期化する
+      await set(ref(db, `${ROOT}/attendance/${name}`), 'yes')
+      onComplete()
+    } catch {
+      setError('パスワードの設定に失敗しました。時間をおいて再度お試しください。')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -62,7 +68,7 @@ export function GuestPasswordSetup({ guestId, name, onComplete }: Props) {
 
         <form onSubmit={handleSubmit} className="login-form">
           <label className="login-label">
-            パスワード（4文字以上）
+            パスワード（6文字以上）
             <input className="login-input" type="password" value={password}
               onChange={e => { setPassword(e.target.value); setError('') }}
               placeholder="パスワードを設定" autoComplete="new-password" />

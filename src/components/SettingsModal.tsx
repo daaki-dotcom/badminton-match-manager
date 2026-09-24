@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { ref, get, update } from 'firebase/database'
+import { ref, update } from 'firebase/database'
 import { db, ROOT } from '../firebase'
-import { hashPassword } from '../auth'
+import { changeOwnPassword } from '../auth'
 import { AuthUser } from '../types'
 
 interface Props {
@@ -44,23 +44,14 @@ export function SettingsModal({ authUser, onClose, onNameChange }: Props) {
     if (newPw !== confirmPw) { setPwError('パスワードが一致しません'); return }
 
     setLoading(true)
-
-    // 現在のパスワードを照合する
-    const snap = await get(ref(db, `${ROOT}/users/${authUser.userId}`))
-    if (!snap.exists()) { setPwError('ユーザー情報が取得できません'); setLoading(false); return }
-
-    const currentHash = await hashPassword(currentPw)
-    const record = snap.val()
-    if (record.passwordHash !== currentHash) {
-      setPwError('現在のパスワードが正しくありません')
+    try {
+      await changeOwnPassword(authUser.userId, currentPw, newPw)
+      setPwDone(true)
+    } catch {
+      setPwError('現在のパスワードが正しくないか、変更に失敗しました')
+    } finally {
       setLoading(false)
-      return
     }
-
-    const newHash = await hashPassword(newPw)
-    await update(ref(db, `${ROOT}/users/${authUser.userId}`), { passwordHash: newHash })
-    setLoading(false)
-    setPwDone(true)
   }
 
   return (

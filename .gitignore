@@ -4,3 +4,8 @@ dist
 .env.local
 _backups/
 *_20[0-9][0-9][0-9][0-9][0-9][0-9]/
+
+# Firebaseサービスアカウントの秘密鍵（絶対にコミットしない）
+*firebase-adminsdk*.json
+serviceAccountKey.json
+firebase-debug.log

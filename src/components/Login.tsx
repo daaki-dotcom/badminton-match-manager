@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ref, get, set } from 'firebase/database'
 import { db, ROOT } from '../firebase'
-import { loginWithId, loginAsGuest, hashPassword } from '../auth'
+import { loginWithId, loginAsGuest, hashPassword, createAuthAccount } from '../auth'
 import { AuthUser, UserRecord } from '../types'
 import { ScheduleForm } from './ScheduleForm'
 
@@ -50,17 +50,22 @@ export function Login({ onLogin }: Props) {
     if (setupPw !== setupPwConfirm) { setSetupError('パスワードが一致しません'); return }
 
     setSetupLoading(true)
-    const id   = generateRandomId()
-    const hash = await hashPassword(setupPw)
-    await set(ref(db, `${ROOT}/users/${id}`), {
-      passwordHash: hash,
-      role: 'admin',
-      isFirstLogin: false,
-      name: '管理者',
-    } satisfies UserRecord)
-
-    setIssuedId(id)
-    setSetupLoading(false)
+    try {
+      const id   = generateRandomId()
+      await createAuthAccount(id, setupPw)
+      const hash = await hashPassword(setupPw)
+      await set(ref(db, `${ROOT}/users/${id}`), {
+        passwordHash: hash,
+        role: 'admin',
+        isFirstLogin: false,
+        name: '管理者',
+      } satisfies UserRecord)
+      setIssuedId(id)
+    } catch {
+      setSetupError('作成に失敗しました。時間をおいて再度お試しください。')
+    } finally {
+      setSetupLoading(false)
+    }
   }
 
   const handleSetupComplete = () => {

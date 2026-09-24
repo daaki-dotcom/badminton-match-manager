@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ref, get, set, remove, update, onValue } from 'firebase/database'
 import { db, ROOT } from '../firebase'
-import { hashPassword } from '../auth'
+import { hashPassword, createAuthAccount } from '../auth'
 import { UserRecord, MemberLevel } from '../types'
 import { AdminSchedule } from './AdminSchedule'
 
@@ -84,17 +84,22 @@ export function Admin({ currentRole }: Props) {
     const trimmedName = newName.trim()
     if (!trimmedName) { setNameError('名前を入力してください'); return }
     setNameError('')
-    const id   = generateRandomId()
-    const hash = await hashPassword(INITIAL_PASSWORD)
-    await set(ref(db, `${ROOT}/users/${id}`), {
-      passwordHash: hash,
-      role: 'member',
-      isFirstLogin: true,
-      name: trimmedName,
-    } satisfies UserRecord)
-    setNewId(id)
-    setNewName('')
-    await fetchUsers()
+    const id = generateRandomId()
+    try {
+      await createAuthAccount(id, INITIAL_PASSWORD)
+      const hash = await hashPassword(INITIAL_PASSWORD)
+      await set(ref(db, `${ROOT}/users/${id}`), {
+        passwordHash: hash,
+        role: 'member',
+        isFirstLogin: true,
+        name: trimmedName,
+      } satisfies UserRecord)
+      setNewId(id)
+      setNewName('')
+      await fetchUsers()
+    } catch {
+      setNameError('ID発行に失敗しました。時間をおいて再度お試しください。')
+    }
   }
 
   const handleCopy = () => {
@@ -159,11 +164,34 @@ export function Admin({ currentRole }: Props) {
     await fetchUsers()
   }
 
+  // Firebase Authenticationの仕様上、管理者が他人の既存パスワードを直接書き換えることはできないため、
+  // 「今のIDを無効化し、同じ権限・名前で新しいIDを発行する」ことでパスワード初期化の代わりとする
   const handleResetPassword = async (entry: UserEntry) => {
-    if (!confirm(`${entry.record.name ?? entry.id} のパスワードを初期化しますか？\n次回ログイン時にパスワード変更が求められます。`)) return
-    const hash = await hashPassword(INITIAL_PASSWORD)
-    await update(ref(db, `${ROOT}/users/${entry.id}`), { passwordHash: hash, isFirstLogin: true })
-    await fetchUsers()
+    if (!confirm(
+      `${entry.record.name ?? entry.id} のパスワードを初期化しますか？\n\n` +
+      `仕様上、今のID（${entry.id}）はそのまま初期化できないため、\n` +
+      `このIDを無効化し、同じ名前・権限で新しいIDを発行します。\n` +
+      `新しいIDとパスワードを本人にお伝えください。`
+    )) return
+    const newIdVal = generateRandomId()
+    try {
+      await createAuthAccount(newIdVal, INITIAL_PASSWORD)
+      const hash = await hashPassword(INITIAL_PASSWORD)
+      const newRecord: UserRecord = {
+        passwordHash: hash,
+        role: entry.record.role,
+        isFirstLogin: true,
+        name: entry.record.name,
+        ...(entry.record.level !== undefined ? { level: entry.record.level } : {}),
+        ...(entry.record.managementOnly !== undefined ? { managementOnly: entry.record.managementOnly } : {}),
+      }
+      await set(ref(db, `${ROOT}/users/${newIdVal}`), newRecord)
+      await remove(ref(db, `${ROOT}/users/${entry.id}`))
+      setNewId(newIdVal)
+      await fetchUsers()
+    } catch {
+      setRoleError('パスワード初期化（IDの再発行）に失敗しました。時間をおいて再度お試しください。')
+    }
   }
 
   // CSVテキストをパースして名前・レベルの配列を返す
@@ -220,6 +248,7 @@ export function Admin({ currentRole }: Props) {
       const issued: IssuedRow[] = []
       for (const row of memberPreview) {
         const id = generateRandomId()
+        await createAuthAccount(id, INITIAL_PASSWORD)
         await set(ref(db, `${ROOT}/users/${id}`), {
           passwordHash: hash,
           role: 'member',

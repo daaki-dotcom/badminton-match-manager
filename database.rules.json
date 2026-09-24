@@ -1,0 +1,112 @@
+{
+  "rules": {
+    "badminton": {
+      ".read": true,
+
+      "activityDate": {
+        ".write": true,
+        ".validate": "newData.isString()"
+      },
+      "courts": {
+        ".write": true,
+        ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 20"
+      },
+      "candidateDates": {
+        ".write": true,
+        "$index": {
+          ".validate": "newData.isString()"
+        }
+      },
+      "attendance": {
+        "$name": {
+          ".write": true,
+          ".validate": "!newData.exists() || (newData.isString() && (newData.val() == 'yes' || newData.val() == 'no' || newData.val() == 'undecided' || newData.val() == ''))"
+        }
+      },
+      "attendanceComments": {
+        "$name": {
+          ".write": true,
+          ".validate": "!newData.exists() || newData.isString()"
+        }
+      },
+      "memberLevels": {
+        "$name": {
+          ".write": true,
+          ".validate": "!newData.exists() || newData.val() == 'exp' || newData.val() == 'nov'"
+        }
+      },
+      "party": {
+        "$name": {
+          ".write": true,
+          ".validate": "!newData.exists() || newData.val() == 'yes' || newData.val() == 'no' || newData.val() == ''"
+        }
+      },
+      "paymentClub": {
+        "$name": {
+          ".write": true,
+          ".validate": "!newData.exists() || newData.isBoolean()"
+        }
+      },
+      "paymentParty": {
+        "$name": {
+          ".write": true,
+          ".validate": "!newData.exists() || newData.isBoolean()"
+        }
+      },
+      "matches": {
+        ".write": true,
+        "$index": {
+          ".validate": "!newData.exists() || newData.hasChildren(['p1', 'p2', 's1', 's2', 'status', 'court'])",
+          "p1":     { ".validate": "newData.isString()" },
+          "p2":     { ".validate": "newData.isString()" },
+          "s1":     { ".validate": "newData.isString()" },
+          "s2":     { ".validate": "newData.isString()" },
+          "status": { ".validate": "newData.val() == 'wait' || newData.val() == 'playing' || newData.val() == 'done'" },
+          "court":  { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        }
+      },
+      "users": {
+        "$uid": {
+          ".write": true,
+          ".validate": "!newData.exists() || newData.hasChildren(['passwordHash', 'role', 'isFirstLogin', 'name'])",
+          "passwordHash":   { ".validate": "newData.isString()" },
+          "role":           { ".validate": "newData.val() == 'owner' || newData.val() == 'admin' || newData.val() == 'member'" },
+          "isFirstLogin":   { ".validate": "newData.isBoolean()" },
+          "name":           { ".validate": "newData.isString()" },
+          "level":          { ".validate": "!newData.exists() || newData.val() == 'exp' || newData.val() == 'nov'" },
+          "managementOnly": { ".validate": "!newData.exists() || newData.isBoolean()" },
+          "$other":         { ".validate": false }
+        }
+      },
+      "guestUsers": {
+        ".write": true,
+        "$gid": {
+          ".validate": "!newData.exists() || newData.hasChildren(['passwordHash', 'name'])",
+          "passwordHash": { ".validate": "newData.isString()" },
+          "name":         { ".validate": "newData.isString()" },
+          "pending":      { ".validate": "!newData.exists() || newData.isBoolean()" },
+          "$other":       { ".validate": false }
+        }
+      },
+      "chouseisanEntries": {
+        ".write": true,
+        "$id": {
+          ".validate": "!newData.exists() || newData.hasChildren(['id', 'name', 'memberType', 'level', 'mode', 'answers', 'createdAt', 'updatedAt'])",
+          "id":            { ".validate": "newData.isString()" },
+          "name":          { ".validate": "newData.isString()" },
+          "memberType":    { ".validate": "newData.val() == 'member' || newData.val() == 'guest'" },
+          "level":         { ".validate": "newData.val() == 'exp' || newData.val() == 'nov'" },
+          "comment":       { ".validate": "!newData.exists() || newData.isString()" },
+          "mode":          { ".validate": "newData.val() == 'single' || newData.val() == 'multi'" },
+          "answers":       { ".validate": true },
+          "linkedUserId":  { ".validate": "!newData.exists() || newData.isString()" },
+          "linkedGuestId": { ".validate": "!newData.exists() || newData.isString()" },
+          "createdAt":     { ".validate": "newData.isNumber()" },
+          "updatedAt":     { ".validate": "newData.isNumber()" },
+          "$other":        { ".validate": false }
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ref, update } from 'firebase/database'
 import { db, ROOT } from '../firebase'
-import { hashPassword, saveSession } from '../auth'
+import { saveSession, setOwnPassword } from '../auth'
 import { AuthUser } from '../types'
 
 interface Props {
@@ -29,17 +29,18 @@ export function PasswordChange({ user, onComplete }: Props) {
     }
 
     setLoading(true)
-    const hash = await hashPassword(newPw)
-
-    await update(ref(db, `${ROOT}/users/${user.userId}`), {
-      passwordHash: hash,
-      isFirstLogin: false,
-    })
-
-    saveSession(user.userId, user.role, user.name)
-
-    setLoading(false)
-    onComplete({ ...user, isFirstLogin: false })
+    try {
+      await setOwnPassword(newPw)
+      await update(ref(db, `${ROOT}/users/${user.userId}`), {
+        isFirstLogin: false,
+      })
+      saveSession(user.userId, user.role, user.name)
+      onComplete({ ...user, isFirstLogin: false })
+    } catch {
+      setError('パスワードの変更に失敗しました。時間をおいて再度お試しください。')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
