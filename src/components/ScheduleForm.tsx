@@ -276,11 +276,10 @@ export function ScheduleForm({ onBack }: Props) {
 
         <div style={{ margin: '0.75rem 0' }}>
           <div className="login-label" style={{ marginBottom: 6 }}>参加意思（クリックで切り替え）</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 8 }}>
             {dateKeys.map((k, i) => (
               <button key={k} type="button" className="btn"
-                onClick={() => cycleAnswer(k)}
-                style={{ flex: '1 1 auto', minWidth: 80 }}>
+                onClick={() => cycleAnswer(k)}>
                 {mode === 'multi' ? `${dateLabels[i]}：` : ''}{SYMBOL[answerFor(k)]}
               </button>
             ))}
