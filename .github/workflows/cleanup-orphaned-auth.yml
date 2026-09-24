@@ -1,0 +1,28 @@
+name: Cleanup Orphaned Firebase Auth Accounts
+
+on:
+  schedule:
+    - cron: '0 18 * * *'   # 毎日 UTC 18:00（日本時間 翌3:00）に自動実行
+  workflow_dispatch: {}    # 手動実行もできるようにする
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: コードを取得
+        uses: actions/checkout@v4
+
+      - name: Node.js のセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 依存パッケージをインストール
+        run: npm ci
+
+      - name: 孤立したFirebase Authenticationアカウントを削除
+        run: node scripts/cleanup-orphaned-auth.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
