@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ref, onValue, set, update, get } from 'firebase/database'
 import { db, ROOT } from '../firebase'
-import { ChouseisanEntry, GuestUserRecord } from '../types'
+import { ChouseisanEntry } from '../types'
 
 const SYMBOL: Record<string, string> = { yes: '○', no: '✕', undecided: '△' }
 
@@ -56,6 +56,7 @@ export function AdminSchedule() {
     const attendanceUpdate: Record<string, string> = {}
     const levelUpdate: Record<string, string> = {}
     const commentUpdate: Record<string, string> = {}
+    const pendingReleaseIds: string[] = []
 
     for (const e of entries) {
       const a = e.answers[date]
@@ -65,18 +66,18 @@ export function AdminSchedule() {
       if (a === 'yes' && e.memberType === 'guest') {
         levelUpdate[e.name] = e.level
       }
-      if (e.linkedGuestId) {
-        const snap = await get(ref(db, `${ROOT}/guestUsers/${e.linkedGuestId}`))
-        if (snap.exists()) {
-          const rec = snap.val() as GuestUserRecord
-          if (a === 'yes') {
-            await update(ref(db, `${ROOT}/guestUsers/${e.linkedGuestId}`), { pending: false })
-          } else if (rec.pending) {
-            // 確定日に◯でなかった仮IDはロックされたまま（このアカウントは使われない）
-          }
-        }
+      if (a === 'yes' && e.linkedGuestId) {
+        pendingReleaseIds.push(e.linkedGuestId)
       }
     }
+
+    // 仮登録ゲストIDのロック解除は、1人ずつ順番にではなく全員分まとめて並列で行う
+    await Promise.all(pendingReleaseIds.map(async id => {
+      const snap = await get(ref(db, `${ROOT}/guestUsers/${id}`))
+      if (snap.exists()) {
+        await update(ref(db, `${ROOT}/guestUsers/${id}`), { pending: false })
+      }
+    }))
 
     if (Object.keys(attendanceUpdate).length > 0) await update(ref(db, `${ROOT}/attendance`), attendanceUpdate)
     if (Object.keys(commentUpdate).length > 0) await update(ref(db, `${ROOT}/attendanceComments`), commentUpdate)
