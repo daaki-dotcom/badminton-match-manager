@@ -9,3 +9,6 @@ _backups/
 *firebase-adminsdk*.json
 serviceAccountKey.json
 firebase-debug.log
+
+# 動作確認用テストアカウントの情報（ローカルのみ・絶対にコミットしない）
+docs/local_test_account.md

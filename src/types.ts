@@ -36,6 +36,7 @@ export interface UserRecord {
   name: string
   level?: MemberLevel      // 正規部員の経験者・未経験者（DB永続管理）
   managementOnly?: boolean // true = 管理専用（出欠・レベル・試合対象外）
+  hidden?: boolean         // true = 管理画面の一覧・人数カウントに表示しない（動作確認用アカウント等）
 }
 
 // ログイン後にアプリ内で保持するセッション情報

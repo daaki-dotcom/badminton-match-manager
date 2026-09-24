@@ -66,7 +66,8 @@ export function Admin({ currentRole }: Props) {
     const snap = await get(ref(db, `${ROOT}/users`))
     if (snap.exists()) {
       const data = snap.val() as Record<string, UserRecord>
-      setUsers(Object.entries(data).map(([id, record]) => ({ id, record })))
+      // hidden: true の動作確認用アカウント等は、一覧・人数カウントから除外する
+      setUsers(Object.entries(data).filter(([, record]) => !record.hidden).map(([id, record]) => ({ id, record })))
     } else {
       setUsers([])
     }

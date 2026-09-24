@@ -76,6 +76,7 @@
           "name":           { ".validate": "newData.isString()" },
           "level":          { ".validate": "!newData.exists() || newData.val() == 'exp' || newData.val() == 'nov'" },
           "managementOnly": { ".validate": "!newData.exists() || newData.isBoolean()" },
+          "hidden":         { ".validate": "!newData.exists() || newData.isBoolean()" },
           "$other":         { ".validate": false }
         }
       },
