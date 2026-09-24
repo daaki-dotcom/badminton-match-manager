@@ -5,11 +5,34 @@ import { ChouseisanEntry } from '../types'
 
 const SYMBOL: Record<string, string> = { yes: '○', no: '✕', undecided: '△' }
 
+const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
+
+// YYYY-MM-DD 形式のキーを作る（toISOString等のUTC変換だとローカルの日付とずれるため使わない）
+const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+// 指定した月を、日曜始まりの週ごとの配列にする（月の前後は null で埋める）
+const buildMonthGrid = (monthDate: Date): (Date | null)[][] => {
+  const year = monthDate.getFullYear()
+  const month = monthDate.getMonth()
+  const startWeekday = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  const cells: (Date | null)[] = []
+  for (let i = 0; i < startWeekday; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d))
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  const weeks: (Date | null)[][] = []
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+  return weeks
+}
+
 export function AdminSchedule() {
   const [activityDate, setActivityDate]     = useState('')
   const [candidateDates, setCandidateDates] = useState<string[]>([])
   const [entries, setEntries]               = useState<ChouseisanEntry[]>([])
-  const [newDate, setNewDate]               = useState('')
+  const [calendarMonth, setCalendarMonth]   = useState(() => { const d = new Date(); d.setDate(1); return d })
+  const [selectedDates, setSelectedDates]   = useState<Set<string>>(new Set())
   const [confirming, setConfirming]         = useState<string | null>(null)
   const [confirmedMsg, setConfirmedMsg]     = useState('')
 
@@ -25,11 +48,29 @@ export function AdminSchedule() {
 
   const mode: 'single' | 'multi' = activityDate ? 'single' : 'multi'
 
-  const addCandidateDate = async () => {
-    if (!newDate || candidateDates.includes(newDate)) return
-    const next = [...candidateDates, newDate].sort()
+  const toggleDateSelection = (key: string) => {
+    if (candidateDates.includes(key)) return
+    setSelectedDates(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const addSelectedDates = async () => {
+    if (selectedDates.size === 0) return
+    const next = [...new Set([...candidateDates, ...selectedDates])].sort()
     await set(ref(db, `${ROOT}/candidateDates`), next)
-    setNewDate('')
+    setSelectedDates(new Set())
+  }
+
+  const changeMonth = (diff: number) => {
+    setCalendarMonth(prev => {
+      const d = new Date(prev)
+      d.setMonth(d.getMonth() + diff)
+      return d
+    })
   }
 
   const removeCandidateDate = async (d: string) => {
@@ -112,14 +153,51 @@ export function AdminSchedule() {
 
       {mode === 'multi' && (
         <div style={{ marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-            <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={{ minWidth: 160 }} />
-            <button className="btn-primary" onClick={addCandidateDate}>候補日を追加</button>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+            カレンダーから候補日を複数クリックして選び、まとめて追加できます。
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <button className="btn-small" onClick={() => changeMonth(-1)}>◀ 前月</button>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>
+              {calendarMonth.getFullYear()}年{calendarMonth.getMonth() + 1}月
+            </span>
+            <button className="btn-small" onClick={() => changeMonth(1)}>次月 ▶</button>
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 8 }}>
+            {WEEKDAY_LABELS.map(w => (
+              <div key={w} style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)' }}>{w}</div>
+            ))}
+            {buildMonthGrid(calendarMonth).flat().map((day, i) => {
+              if (!day) return <div key={i} />
+              const key = dateKey(day)
+              const alreadyAdded = candidateDates.includes(key)
+              const isSelected = selectedDates.has(key)
+              return (
+                <button key={i} type="button"
+                  onClick={() => toggleDateSelection(key)}
+                  disabled={alreadyAdded}
+                  title={alreadyAdded ? '追加済み' : key}
+                  style={{
+                    padding: '6px 0', borderRadius: 6, fontSize: 12, textAlign: 'center',
+                    border: `1px solid ${isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.15)'}`,
+                    background: alreadyAdded ? 'rgba(255,255,255,0.05)' : isSelected ? 'rgba(110,231,183,0.2)' : 'transparent',
+                    color: alreadyAdded ? 'var(--text-muted)' : isSelected ? 'var(--accent)' : 'var(--text)',
+                    cursor: alreadyAdded ? 'default' : 'pointer',
+                    fontFamily: "'Noto Sans JP', sans-serif",
+                  }}>
+                  {day.getDate()}
+                </button>
+              )
+            })}
+          </div>
+          <button className="btn-primary" onClick={addSelectedDates} disabled={selectedDates.size === 0}>
+            選択した候補日を追加する（{selectedDates.size}件）
+          </button>
+
           {candidateDates.length === 0 ? (
-            <p className="admin-empty">候補日が未設定です。追加すると回答フォームに反映されます。</p>
+            <p className="admin-empty" style={{ marginTop: '0.75rem' }}>候補日が未設定です。追加すると回答フォームに反映されます。</p>
           ) : (
-            <table className="admin-table">
+            <table className="admin-table" style={{ marginTop: '0.75rem' }}>
               <thead><tr><th>候補日</th><th>○</th><th>△</th><th>✕</th><th></th></tr></thead>
               <tbody>
                 {candidateDates.map(d => {
