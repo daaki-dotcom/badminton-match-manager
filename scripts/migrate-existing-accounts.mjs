@@ -7,8 +7,15 @@
 //      （Firebaseコンソール → プロジェクトの設定 → サービスアカウント → 新しい秘密鍵の生成）
 //   3. Firebase Authenticationの「メール/パスワード」ログイン方法が有効化されていること
 //
+// 設計：Firebase Authenticationの内部ID（uid）はFirebase側の自動採番に任せる
+// （クライアント側でのアカウント作成、例：createAuthAccount、はuidを指定できない仕様のため、
+//  移行分だけ特別扱い＝uidをアプリのIDに強制する、とすると今後作られるアカウントと
+//  仕組みが食い違ってしまう）。かわりに「uid → アプリのID」の対応表を
+//  badminton/authUidToId に書き込み、以後のセキュリティルールや管理処理は
+//  すべてこの対応表を通じて本人を特定する。
+//
 // このスクリプトは badminton/users・badminton/guestUsers に存在する各レコードに対して、
-// 同じIDをFirebase AuthenticationのUIDとして持つアカウントを作成する（既に存在する場合はスキップ）。
+// 既存のFirebase Authenticationアカウントがあれば一旦削除し、新しい設計で作り直す。
 // パスワードは元の値を復元できないため、全員 INITIAL_PASSWORD に統一し、isFirstLogin を
 // true に戻すことで「次回ログイン時にパスワード変更を求める」既存の仕組みに乗せる。
 //
@@ -36,31 +43,39 @@ async function migrateNode(path, label) {
   const ids = Object.keys(data)
   console.log(`\n=== ${label}（${ids.length}件） ===`)
 
-  const results = { created: [], skipped: [], failed: [] }
+  const results = { created: [], failed: [] }
 
   for (const id of ids) {
     try {
-      await auth.getUser(id)
-      results.skipped.push(id)
-      continue
-    } catch (e) {
-      if (e.code !== 'auth/user-not-found') { results.failed.push({ id, error: e.message }); continue }
-    }
+      // 旧方式（uid = アプリのID）で作られたアカウントが残っていれば削除する
+      try {
+        await auth.getUser(id)
+        await auth.deleteUser(id)
+      } catch (e) {
+        if (e.code !== 'auth/user-not-found') throw e
+      }
+      // メールアドレス重複（別のuidで既に存在する場合）も念のため削除する
+      try {
+        const existing = await auth.getUserByEmail(emailForId(id))
+        await auth.deleteUser(existing.uid)
+      } catch (e) {
+        if (e.code !== 'auth/user-not-found') throw e
+      }
 
-    try {
-      await auth.createUser({
-        uid: id,
+      // 新しいuidを自動採番させて作成し、対応表を書き込む
+      const created = await auth.createUser({
         email: emailForId(id),
         password: INITIAL_PASSWORD,
         emailVerified: true,
       })
+      await db.ref(`${ROOT}/authUidToId/${created.uid}`).set(id)
       results.created.push(id)
     } catch (e) {
       results.failed.push({ id, error: e.message })
     }
   }
 
-  console.log(`  作成:${results.created.length}件 / 既存でスキップ:${results.skipped.length}件 / 失敗:${results.failed.length}件`)
+  console.log(`  作成:${results.created.length}件 / 失敗:${results.failed.length}件`)
   if (results.failed.length > 0) console.log('  失敗一覧:', results.failed)
   return results
 }

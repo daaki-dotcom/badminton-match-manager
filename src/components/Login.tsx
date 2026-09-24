@@ -4,6 +4,7 @@ import { db, ROOT } from '../firebase'
 import { loginWithId, loginAsGuest, hashPassword, createAuthAccount } from '../auth'
 import { AuthUser, UserRecord } from '../types'
 import { ScheduleForm } from './ScheduleForm'
+import { PrivacyPolicy } from './PrivacyPolicy'
 
 interface Props {
   onLogin: (user: AuthUser) => void
@@ -21,6 +22,7 @@ export function Login({ onLogin }: Props) {
   const [loading, setLoading]     = useState(false)
   const [checking, setChecking]   = useState(true)
   const [showSchedule, setShowSchedule] = useState(false)
+  const [showPrivacy, setShowPrivacy]   = useState(false)
 
   // 初回セットアップ用
   const [isSetup, setIsSetup]       = useState(false)
@@ -201,7 +203,15 @@ export function Login({ onLogin }: Props) {
         </button>
 
         <p className="login-guest-note">参加登録はホーム画面から行えます</p>
+        <p className="login-guest-note">
+          <button type="button" onClick={() => setShowPrivacy(true)}
+            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer', fontSize: 12 }}>
+            プライバシーポリシー
+          </button>
+        </p>
       </div>
+
+      {showPrivacy && <PrivacyPolicy onClose={() => setShowPrivacy(false)} />}
     </div>
   )
 }

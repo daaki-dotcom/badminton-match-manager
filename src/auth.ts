@@ -1,4 +1,4 @@
-import { ref, get } from 'firebase/database'
+import { ref, get, set as dbSet } from 'firebase/database'
 import { initializeApp, deleteApp } from 'firebase/app'
 import {
   getAuth,
@@ -31,14 +31,20 @@ export async function hashPassword(password: string): Promise<string> {
 // Firebase Authentication に、このアプリのID用の新規アカウントを作る
 // （すでに同じIDのアカウントがある場合はエラーを投げる。呼び出し元で捕捉すること）
 //
-// 注意：Firebaseの仕様上、アカウント作成はその場で「作成したアカウントへのログイン」を
+// 注意①：Firebaseの仕様上、アカウント作成はその場で「作成したアカウントへのログイン」を
 // 兼ねてしまう。管理者が他人のアカウントを作る場合に管理者自身のログインが切れてしまわないよう、
 // 使い捨ての別インスタンス（一時アプリ）上で作成し、現在のログイン状態には一切影響させない
+//
+// 注意②：Firebase Authenticationが割り振る内部ID（uid）は、このアプリのID（idの引数）とは
+// 別物のランダムな値になる（クライアント側からuidを指定することはできない仕様のため）。
+// そのため「内部id → アプリのID」の対応表（authUidToId）を必ず一緒に書き込み、
+// 今後のセキュリティルールや管理処理がこの対応表を通じて本人を特定できるようにする
 export async function createAuthAccount(id: string, password: string): Promise<void> {
   const tempApp = initializeApp(firebaseConfig, `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`)
   try {
     const tempAuth = getAuth(tempApp)
-    await createUserWithEmailAndPassword(tempAuth, emailForId(id), password)
+    const cred = await createUserWithEmailAndPassword(tempAuth, emailForId(id), password)
+    await dbSet(ref(db, `${ROOT}/authUidToId/${cred.user.uid}`), id)
   } finally {
     await deleteApp(tempApp)
   }

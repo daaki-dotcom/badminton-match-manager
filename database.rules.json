@@ -89,6 +89,12 @@
           "$other":       { ".validate": false }
         }
       },
+      "authUidToId": {
+        "$authUid": {
+          ".write": true,
+          ".validate": "newData.isString()"
+        }
+      },
       "chouseisanEntries": {
         ".write": true,
         "$id": {

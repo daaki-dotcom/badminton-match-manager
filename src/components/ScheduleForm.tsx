@@ -4,7 +4,7 @@ import { db, ROOT } from '../firebase'
 import { hashPassword, generateGuestId, createAuthAccount } from '../auth'
 import { ChouseisanEntry, AttendanceStatus, MemberLevel, UserRecord, GuestUserRecord } from '../types'
 
-const INITIAL_PASSWORD = 'nicesoul'
+const INITIAL_PASSWORD = 'boldbad'
 const SYMBOL: Record<AttendanceStatus, string> = { yes: '○', no: '✕', undecided: '△', '': '？' }
 const CYCLE: AttendanceStatus[] = ['yes', 'no', 'undecided']
 
