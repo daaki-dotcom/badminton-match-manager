@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ref, get, set, remove, update, onValue } from 'firebase/database'
 import { db, ROOT } from '../firebase'
 import { hashPassword, createAuthAccount } from '../auth'
-import { UserRecord, MemberLevel } from '../types'
+import { UserRecord, MemberLevel, GuestUserRecord } from '../types'
 import { AdminSchedule } from './AdminSchedule'
 
 const INITIAL_PASSWORD = 'nicesoul'
@@ -16,6 +16,11 @@ function generateRandomId(): string {
 interface UserEntry {
   id: string
   record: UserRecord
+}
+
+interface GuestEntry {
+  id: string
+  record: GuestUserRecord
 }
 
 interface Props {
@@ -50,6 +55,11 @@ export function Admin({ currentRole }: Props) {
   const [copiedMemberId,  setCopiedMemberId]  = useState<string | null>(null)
   const [copiedAllMember, setCopiedAllMember] = useState(false)
 
+  // ゲスト一覧
+  const [guests, setGuests]             = useState<GuestEntry[]>([])
+  const [guestsLoading, setGuestsLoading] = useState(true)
+  const [copiedGuestListId, setCopiedGuestListId] = useState<string | null>(null)
+
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -71,7 +81,17 @@ export function Admin({ currentRole }: Props) {
       setActivityDate(val)
       setDateInput(val)
     })
-    return () => unsub()
+    // ゲスト一覧をリアルタイムで監視する
+    const unsubGuests = onValue(ref(db, `${ROOT}/guestUsers`), snap => {
+      if (snap.exists()) {
+        const data = snap.val() as Record<string, GuestUserRecord>
+        setGuests(Object.entries(data).map(([id, record]) => ({ id, record })))
+      } else {
+        setGuests([])
+      }
+      setGuestsLoading(false)
+    })
+    return () => { unsub(); unsubGuests() }
   }, [])
 
   const handleSaveDate = async () => {
@@ -286,6 +306,17 @@ export function Admin({ currentRole }: Props) {
     if (!confirm(`${entry.record.name ?? entry.id} を削除しますか？`)) return
     await remove(ref(db, `${ROOT}/users/${entry.id}`))
     await fetchUsers()
+  }
+
+  const handleDeleteGuest = async (entry: GuestEntry) => {
+    if (!confirm(`${entry.record.name ?? entry.id} を削除しますか？`)) return
+    await remove(ref(db, `${ROOT}/guestUsers/${entry.id}`))
+  }
+
+  const copyGuestId = (entry: GuestEntry) => {
+    navigator.clipboard.writeText(`${entry.record.name}  ID: ${entry.id}`)
+    setCopiedGuestListId(entry.id)
+    setTimeout(() => setCopiedGuestListId(null), 2000)
   }
 
   const adminCount = users.filter(u => u.record.role === 'admin').length
@@ -513,6 +544,55 @@ export function Admin({ currentRole }: Props) {
                       PW初期化
                     </button>
                     <button className="btn-small btn-danger" onClick={() => handleDelete(entry)}>
+                      削除
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      {/* ゲスト一覧 */}
+      <section className="admin-section">
+        <h3 className="admin-subtitle">
+          ゲスト一覧
+          <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>
+            {guests.length}人
+          </span>
+        </h3>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
+          登録済みのゲストにIDを再度伝えたい場合はここで確認してください。
+        </p>
+
+        {guestsLoading ? (
+          <p>読み込み中...</p>
+        ) : guests.length === 0 ? (
+          <p className="admin-empty">登録済みのゲストはいません</p>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>名前</th>
+                <th>ID</th>
+                <th>状態</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {guests.map(entry => (
+                <tr key={entry.id}>
+                  <td>{entry.record.name ?? '—'}</td>
+                  <td className="admin-id">{entry.id}</td>
+                  <td style={{ fontSize: 12, color: entry.record.pending ? 'var(--accent3)' : 'var(--text-muted)' }}>
+                    {entry.record.pending ? '日程確定待ち（ログイン不可）' : '利用可能'}
+                  </td>
+                  <td className="admin-actions">
+                    <button className="btn-small" onClick={() => copyGuestId(entry)}>
+                      {copiedGuestListId === entry.id ? '✅' : 'IDをコピー'}
+                    </button>
+                    <button className="btn-small btn-danger" onClick={() => handleDeleteGuest(entry)}>
                       削除
                     </button>
                   </td>
