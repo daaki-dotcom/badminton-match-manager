@@ -260,7 +260,7 @@ export default function App() {
         {activeTab === 'home' && (
           <Home
             authUser={authUser}
-            state={state}
+            state={{ ...state, memberLevels: { ...state.memberLevels, ...dbLevels } }}
             isManagementOnly={managementOnlyNames.includes(authUser.name)}
             isActivityEnded={isActivityEnded}
             onSubmitAttendance={handleSubmitAttendance}
