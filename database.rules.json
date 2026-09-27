@@ -68,10 +68,13 @@
       },
       "users": {
         "$uid": {
-          ".write": true,
+          ".read": true,
+          ".write": "!data.exists() || (auth != null && (root.child('badminton/authUidToId').child(auth.uid).val() == $uid || root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'admin' || root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'owner'))",
           ".validate": "!newData.exists() || newData.hasChildren(['passwordHash', 'role', 'isFirstLogin', 'name'])",
           "passwordHash":   { ".validate": "newData.isString()" },
-          "role":           { ".validate": "newData.val() == 'owner' || newData.val() == 'admin' || newData.val() == 'member'" },
+          "role": {
+            ".validate": "(newData.val() == 'owner' || newData.val() == 'admin' || newData.val() == 'member') && (data.val() == newData.val() || (auth != null && (root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'admin' || root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'owner')) || !root.child('badminton/users').hasChildren())"
+          },
           "isFirstLogin":   { ".validate": "newData.isBoolean()" },
           "name":           { ".validate": "newData.isString()" },
           "level":          { ".validate": "!newData.exists() || newData.val() == 'exp' || newData.val() == 'nov'" },
@@ -81,12 +84,16 @@
         }
       },
       "guestUsers": {
-        ".write": true,
+        ".read": true,
+        ".write": "newData.hasChildren() == false",
         "$gid": {
+          ".write": "!data.exists() || (auth != null && (root.child('badminton/authUidToId').child(auth.uid).val() == $gid || root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'admin' || root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'owner'))",
           ".validate": "!newData.exists() || newData.hasChildren(['passwordHash', 'name'])",
           "passwordHash": { ".validate": "newData.isString()" },
           "name":         { ".validate": "newData.isString()" },
-          "pending":      { ".validate": "!newData.exists() || newData.isBoolean()" },
+          "pending": {
+            ".validate": "!newData.exists() || (newData.isBoolean() && (!data.exists() || data.val() == newData.val() || (auth != null && (root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'admin' || root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'owner'))))"
+          },
           "$other":       { ".validate": false }
         }
       },
