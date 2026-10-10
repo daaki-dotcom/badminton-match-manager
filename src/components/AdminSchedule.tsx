@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { ref, onValue, set, update, get } from 'firebase/database'
 import { db, ROOT } from '../firebase'
 import { ChouseisanEntry } from '../types'
+import { planEntryDeletion, executeEntryDeletion } from '../guestBackup'
 
 const SYMBOL: Record<string, string> = { yes: '○', no: '✕', undecided: '△' }
 
@@ -27,7 +28,11 @@ const buildMonthGrid = (monthDate: Date): (Date | null)[][] => {
   return weeks
 }
 
-export function AdminSchedule() {
+interface Props {
+  canDelete?: boolean   // オーナーだけ回答の削除ボタンを出す
+}
+
+export function AdminSchedule({ canDelete = false }: Props) {
   const [activityDate, setActivityDate]     = useState('')
   const [candidateDates, setCandidateDates] = useState<string[]>([])
   const [entries, setEntries]               = useState<ChouseisanEntry[]>([])
@@ -35,6 +40,27 @@ export function AdminSchedule() {
   const [selectedDates, setSelectedDates]   = useState<Set<string>>(new Set())
   const [confirming, setConfirming]         = useState<string | null>(null)
   const [confirmedMsg, setConfirmedMsg]     = useState('')
+  const [deletingId, setDeletingId]         = useState<string | null>(null)
+
+  // 回答の削除：その人に紐づくデータ（ログインID・出欠・レベル・コメント・懇親会・支払い・試合）をすべて消す
+  const handleDeleteEntry = async (e: ChouseisanEntry) => {
+    setDeletingId(e.id)
+    try {
+      const plan = await planEntryDeletion(e)
+      const note = plan.touchName
+        ? ''
+        : '\n\n※同じ名前の正規部員・別のゲスト・別の回答があるため、名前で管理しているデータ（出欠など）は消さず、回答だけを消します。'
+      const ok = confirm(`「${e.name}」に紐づく次のデータをすべて削除します。\n\n・${plan.summary.join('\n・')}${note}\n\n削除後も、次の午前3時までは「最近削除したゲスト」から元に戻せます。よろしいですか？`)
+      if (!ok) return
+      await executeEntryDeletion(plan)
+      setConfirmedMsg(`「${e.name}」のデータを削除しました。`)
+    } catch (err) {
+      console.error(err)
+      alert('削除に失敗しました。データは消えていません。')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   useEffect(() => {
     const u1 = onValue(ref(db, `${ROOT}/activityDate`), s => setActivityDate(s.val() || ''))
@@ -230,7 +256,7 @@ export function AdminSchedule() {
         <p className="admin-empty">まだ回答がありません</p>
       ) : (
         <table className="admin-table">
-          <thead><tr><th>名前</th><th>種別</th><th>レベル</th><th>回答</th><th>コメント</th></tr></thead>
+          <thead><tr><th>名前</th><th>種別</th><th>レベル</th><th>回答</th><th>コメント</th>{canDelete && <th></th>}</tr></thead>
           <tbody>
             {entries.map(e => (
               <tr key={e.id}>
@@ -241,6 +267,13 @@ export function AdminSchedule() {
                   {Object.entries(e.answers).map(([k, v]) => `${mode === 'single' ? '' : k + ':'}${SYMBOL[v] ?? '?'}`).join('　')}
                 </td>
                 <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{e.comment || '—'}</td>
+                {canDelete && (
+                  <td>
+                    <button className="btn-small btn-danger" onClick={() => handleDeleteEntry(e)} disabled={deletingId === e.id}>
+                      {deletingId === e.id ? '削除中…' : '削除'}
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

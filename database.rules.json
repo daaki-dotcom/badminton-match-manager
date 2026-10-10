@@ -127,7 +127,7 @@
       ".read": "auth != null && (root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'admin' || root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'owner')",
       ".write": "auth != null && (root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'admin' || root.child('badminton/users').child(root.child('badminton/authUidToId').child(auth.uid).val()).child('role').val() == 'owner')",
       "$key": {
-        ".validate": "!newData.exists() || newData.hasChildren(['at', 'expiresAt', 'guestId', 'name', 'guest'])"
+        ".validate": "!newData.exists() || newData.hasChildren(['at', 'expiresAt', 'name'])"
       }
     }
   }

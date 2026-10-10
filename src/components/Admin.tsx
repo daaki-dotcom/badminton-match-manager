@@ -4,6 +4,7 @@ import { db, ROOT } from '../firebase'
 import { hashPassword, createAuthAccount } from '../auth'
 import { UserRecord, MemberLevel, GuestUserRecord, ChouseisanEntry, Match } from '../types'
 import { AdminSchedule } from './AdminSchedule'
+import { BACKUP_ROOT, GuestBackup, nextCleanupAt, readNode } from '../guestBackup'
 import { matchHasPlayer, isValidPlayerName, INVALID_NAME_MESSAGE } from '../matchUtils'
 
 const INITIAL_PASSWORD = 'nicesoul'
@@ -12,12 +13,6 @@ const MAX_ADMIN = 4
 function generateRandomId(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
   return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-}
-
-// Firebase の指定ノードを丸ごと読む（存在しなければ空オブジェクト）
-async function readNode(path: string): Promise<Record<string, unknown>> {
-  const snap = await get(ref(db, `${ROOT}/${path}`))
-  return snap.exists() ? (snap.val() as Record<string, unknown>) : {}
 }
 
 interface UserEntry {
@@ -36,32 +31,6 @@ interface GuestDeleteRow {
   value: string
   locked?: boolean
   nameKeyed?: boolean
-}
-
-// 削除したゲストの控え。管理者・オーナーだけが読み書きできる場所（badminton の外）に保存する。
-// 次の午前3時（日本時間）の自動掃除までは「元に戻す」ができる
-// （掃除で削除済みIDのログイン用アカウントが消えるため、それ以降は戻せない）
-const BACKUP_ROOT = 'guestDeleteBackups'
-const JST_OFFSET_MS = 9 * 60 * 60 * 1000
-const DAY_MS = 24 * 60 * 60 * 1000
-
-function nextCleanupAt(now = Date.now()): number {
-  const jst = now + JST_OFFSET_MS
-  let boundary = Math.floor(jst / DAY_MS) * DAY_MS + 3 * 60 * 60 * 1000
-  if (boundary <= jst) boundary += DAY_MS
-  return boundary - JST_OFFSET_MS
-}
-
-interface GuestBackup {
-  key: string
-  at: number
-  expiresAt: number
-  guestId: string
-  name: string
-  guest: GuestUserRecord
-  entries?: { id: string; value: unknown }[]   // chouseisanEntries/{id} の中身
-  byName?: { path: string; value: unknown }[]  // 'attendance/名前' などのパス → 消した値
-  matches?: Match[]                            // 消した試合
 }
 
 interface GuestDeletePlan {
@@ -504,10 +473,10 @@ export function Admin({ currentRole }: Props) {
     try {
       const updates: Record<string, unknown> = {}
       const [guestSnap, matchesNode] = await Promise.all([
-        get(ref(db, `${ROOT}/guestUsers/${b.guestId}`)),
+        b.guestId ? get(ref(db, `${ROOT}/guestUsers/${b.guestId}`)) : Promise.resolve(null),
         readNode('matches'),
       ])
-      if (!guestSnap.exists()) updates[`guestUsers/${b.guestId}`] = b.guest
+      if (b.guestId && b.guest && guestSnap && !guestSnap.exists()) updates[`guestUsers/${b.guestId}`] = b.guest
       ;(b.entries ?? []).forEach(({ id, value }) => { updates[`chouseisanEntries/${id}`] = value })
       await Promise.all((b.byName ?? []).map(async ({ path, value }) => {
         const snap = await get(ref(db, `${ROOT}/${path}`))
@@ -575,7 +544,7 @@ export function Admin({ currentRole }: Props) {
 
       {/* 日程調整 */}
       <section className="admin-section">
-        <AdminSchedule />
+        <AdminSchedule canDelete={currentRole === 'owner'} />
       </section>
 
       {/* 新規ID発行 */}
