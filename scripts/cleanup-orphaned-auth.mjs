@@ -56,5 +56,16 @@ for (const [uid, appId] of Object.entries(map)) {
   console.log(`  削除: ${appId}（uid=${uid}）`)
 }
 
+// 削除したゲストの控え（管理画面の「元に戻す」用）のうち、期限(expiresAt)を過ぎたものを削除する
+const backupsSnap = await db.ref('guestDeleteBackups').once('value')
+let purgedBackups = 0
+for (const [key, v] of Object.entries(backupsSnap.val() || {})) {
+  if (!v || typeof v.expiresAt !== 'number' || v.expiresAt <= Date.now()) {
+    await db.ref(`guestDeleteBackups/${key}`).remove()
+    purgedBackups++
+  }
+}
+console.log(`期限切れの削除控え ${purgedBackups} 件を削除しました`)
+
 console.log(`完了。孤立エントリ ${deletedCount} 件を削除しました（対応表エントリ総数: ${Object.keys(map).length}件）`)
 process.exit(0)

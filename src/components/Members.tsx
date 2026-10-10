@@ -77,8 +77,8 @@ export function Members({
       onClick={() => isAdmin && onToggle()}
       style={{
         padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700,
-        border: `1.5px solid ${paid ? 'rgba(5,150,105,0.4)' : 'rgba(16,72,60,0.15)'}`,
-        background: paid ? 'rgba(5,150,105,0.15)' : 'var(--surface2)',
+        border: `1.5px solid ${paid ? 'rgba(var(--accent-rgb),0.4)' : 'rgba(var(--ink-rgb),0.15)'}`,
+        background: paid ? 'rgba(var(--accent-rgb),0.15)' : 'var(--surface2)',
         color: paid ? 'var(--accent)' : 'var(--text-muted)',
         cursor: isAdmin ? 'pointer' : 'default',
         fontFamily: "'Noto Sans JP', sans-serif",
@@ -108,7 +108,7 @@ export function Members({
             </button>
           </div>
           {showList && (
-            <div style={{ borderTop: '1px solid rgba(16,72,60,0.1)', paddingTop: '0.75rem', marginBottom: '0.75rem' }}>
+            <div style={{ borderTop: '1px solid rgba(var(--ink-rgb),0.1)', paddingTop: '0.75rem', marginBottom: '0.75rem' }}>
               {attendees.map(name => (
                 <div key={name} style={{ fontSize: 14, lineHeight: 2 }}>{d(name)}</div>
               ))}

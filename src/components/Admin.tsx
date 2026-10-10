@@ -4,6 +4,7 @@ import { db, ROOT } from '../firebase'
 import { hashPassword, createAuthAccount } from '../auth'
 import { UserRecord, MemberLevel, GuestUserRecord, ChouseisanEntry, Match } from '../types'
 import { AdminSchedule } from './AdminSchedule'
+import { matchHasPlayer, isValidPlayerName, INVALID_NAME_MESSAGE } from '../matchUtils'
 
 const INITIAL_PASSWORD = 'nicesoul'
 const MAX_ADMIN = 4
@@ -37,6 +38,32 @@ interface GuestDeleteRow {
   nameKeyed?: boolean
 }
 
+// 削除したゲストの控え。管理者・オーナーだけが読み書きできる場所（badminton の外）に保存する。
+// 次の午前3時（日本時間）の自動掃除までは「元に戻す」ができる
+// （掃除で削除済みIDのログイン用アカウントが消えるため、それ以降は戻せない）
+const BACKUP_ROOT = 'guestDeleteBackups'
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000
+
+function nextCleanupAt(now = Date.now()): number {
+  const jst = now + JST_OFFSET_MS
+  let boundary = Math.floor(jst / DAY_MS) * DAY_MS + 3 * 60 * 60 * 1000
+  if (boundary <= jst) boundary += DAY_MS
+  return boundary - JST_OFFSET_MS
+}
+
+interface GuestBackup {
+  key: string
+  at: number
+  expiresAt: number
+  guestId: string
+  name: string
+  guest: GuestUserRecord
+  entries?: { id: string; value: unknown }[]   // chouseisanEntries/{id} の中身
+  byName?: { path: string; value: unknown }[]  // 'attendance/名前' などのパス → 消した値
+  matches?: Match[]                            // 消した試合
+}
+
 interface GuestDeletePlan {
   entry: GuestEntry
   name: string
@@ -46,6 +73,15 @@ interface GuestDeletePlan {
   allMatches: Match[]
   rows: GuestDeleteRow[]
   hasAttendance: boolean
+  raw: {
+    chNode: Record<string, unknown>
+    attendance: Record<string, unknown>
+    levels: Record<string, unknown>
+    comments: Record<string, unknown>
+    party: Record<string, unknown>
+    payClub: Record<string, unknown>
+    payParty: Record<string, unknown>
+  }
 }
 
 interface Props {
@@ -87,7 +123,19 @@ export function Admin({ currentRole }: Props) {
   const [deletePlan, setDeletePlan]     = useState<GuestDeletePlan | null>(null)
   const [deleteChecks, setDeleteChecks] = useState<Record<string, boolean>>({})
   const [deleting, setDeleting]         = useState(false)
+  const [backups, setBackups]           = useState<GuestBackup[]>([])
+  const [restoringKey, setRestoringKey]   = useState<string | null>(null)
+  const [restoreMsg, setRestoreMsg]     = useState('')
 
+
+  // 削除したゲストの控え（期限が過ぎたものは表示しない）
+  useEffect(() => {
+    return onValue(ref(db, BACKUP_ROOT), snap => {
+      const data = (snap.val() ?? {}) as Record<string, Omit<GuestBackup, 'key'>>
+      setBackups(Object.entries(data).map(([key, v]) => ({ key, ...v })).sort((a, b) => b.at - a.at))
+    }, () => setBackups([]))
+  }, [])
+  const liveBackups = backups.filter(b => b.expiresAt > Date.now())
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -132,6 +180,7 @@ export function Admin({ currentRole }: Props) {
   const handleIssueId = async () => {
     const trimmedName = newName.trim()
     if (!trimmedName) { setNameError('名前を入力してください'); return }
+    if (!isValidPlayerName(trimmedName)) { setNameError(INVALID_NAME_MESSAGE); return }
     setNameError('')
     const id = generateRandomId()
     try {
@@ -192,6 +241,7 @@ export function Admin({ currentRole }: Props) {
   const handleSaveName = async (entry: UserEntry) => {
     const trimmed = editingName.trim()
     if (!trimmed) return
+    if (!isValidPlayerName(trimmed)) { alert(INVALID_NAME_MESSAGE); return }
     await update(ref(db, `${ROOT}/users/${entry.id}`), { name: trimmed })
     setEditingId(null)
     await fetchUsers()
@@ -251,6 +301,7 @@ export function Admin({ currentRole }: Props) {
     for (const line of lines) {
       const [name, levelStr] = line.split(',').map(s => s.trim())
       if (!name || name === '名前') continue
+      if (!isValidPlayerName(name)) return { rows: [], error: `「${name}」: ${INVALID_NAME_MESSAGE}` }
       const level: MemberLevel = levelStr === '経験者' ? 'exp' : 'nov'
       rows.push({ name, level })
     }
@@ -365,7 +416,7 @@ export function Admin({ currentRole }: Props) {
 
     const allMatches = Object.values(matchesNode) as Match[]
     const hitMatches = touchName
-      ? allMatches.filter(m => m.p1.split(' / ').includes(name) || m.p2.split(' / ').includes(name))
+      ? allMatches.filter(m => matchHasPlayer(m, name))
       : []
     const scored = hitMatches.filter(m => m.s1 !== '' || m.s2 !== '').length
     const comment = comments[name] ? `「${String(comments[name])}」` : 'なし'
@@ -384,37 +435,102 @@ export function Admin({ currentRole }: Props) {
     rows.forEach(r => { checks[r.key] = r.nameKeyed ? touchName : true })
 
     setDeleteChecks(checks)
-    setDeletePlan({ entry, name, linkedIds, touchName, hitMatches, allMatches, rows, hasAttendance: attendance[name] !== undefined })
+    setDeletePlan({ entry, name, linkedIds, touchName, hitMatches, allMatches, rows, hasAttendance: attendance[name] !== undefined,
+      raw: { chNode, attendance, levels, comments, party, payClub, payParty } })
   }
 
   const executeDeleteGuest = async () => {
     if (!deletePlan) return
-    const { entry, name, linkedIds, touchName, hitMatches, allMatches } = deletePlan
+    const { entry, name, linkedIds, touchName, hitMatches, allMatches, raw } = deletePlan
     const c = deleteChecks
     setDeleting(true)
+    // 消す前に、消す内容の控えを作る（あとで「元に戻す」に使う）
+    const at = Date.now()
+    const backupKey = `${at}_${entry.id}`
+    const entriesBackup: { id: string; value: unknown }[] = []
+    const byNameBackup: { path: string; value: unknown }[] = []
+    let matchesBackup: Match[] = []
     try {
       // 複数の場所をまとめて1回の更新で消す（途中で失敗して中途半端に残らないようにする）
       const updates: Record<string, unknown> = { [`guestUsers/${entry.id}`]: null }
-      if (c.answers) linkedIds.forEach(id => { updates[`chouseisanEntries/${id}`] = null })
+      const delByName = (node: string, values: Record<string, unknown>) => {
+        updates[`${node}/${name}`] = null
+        if (values[name] !== undefined) byNameBackup.push({ path: `${node}/${name}`, value: values[name] })
+      }
+      if (c.answers) linkedIds.forEach(id => { updates[`chouseisanEntries/${id}`] = null; entriesBackup.push({ id, value: raw.chNode[id] }) })
       if (touchName) {
-        if (c.attendance) updates[`attendance/${name}`] = null
-        if (c.level)      updates[`memberLevels/${name}`] = null
-        if (c.comment)    updates[`attendanceComments/${name}`] = null
-        if (c.party)      updates[`party/${name}`] = null
+        if (c.attendance) delByName('attendance', raw.attendance)
+        if (c.level)      delByName('memberLevels', raw.levels)
+        if (c.comment)    delByName('attendanceComments', raw.comments)
+        if (c.party)      delByName('party', raw.party)
         if (c.payment) {
-          updates[`paymentClub/${name}`] = null
-          updates[`paymentParty/${name}`] = null
+          delByName('paymentClub', raw.payClub)
+          delByName('paymentParty', raw.payParty)
         }
         if (c.matches && hitMatches.length > 0) {
           const rest = allMatches.filter(m => !hitMatches.includes(m))
           updates['matches'] = rest.length > 0 ? Object.fromEntries(rest.map((m, i) => [String(i), m])) : null
+          matchesBackup = hitMatches
         }
       }
-      await update(ref(db, ROOT), updates)
+      // 控えを先に保存してから消す。消すのに失敗したら控えを取り消す
+      const backup: Omit<GuestBackup, 'key'> = {
+        at, expiresAt: nextCleanupAt(at), guestId: entry.id, name, guest: entry.record,
+        ...(entriesBackup.length > 0 && { entries: entriesBackup }),
+        ...(byNameBackup.length > 0 && { byName: byNameBackup }),
+        ...(matchesBackup.length > 0 && { matches: matchesBackup }),
+      }
+      await set(ref(db, `${BACKUP_ROOT}/${backupKey}`), backup)
+      try {
+        await update(ref(db, ROOT), updates)
+      } catch (e) {
+        await remove(ref(db, `${BACKUP_ROOT}/${backupKey}`))
+        throw e
+      }
+      setRestoreMsg('')
       setDeletePlan(null)
+    } catch (e) {
+      console.error(e)
+      alert('削除に失敗しました。ゲストのデータは消えていません。')
     } finally {
       setDeleting(false)
     }
+  }
+
+  // 削除したゲストを元に戻す（現在すでにあるデータは上書きしない）
+  const restoreGuest = async (b: GuestBackup) => {
+    if (!confirm(`「${b.name || b.guestId}」を元に戻しますか？`)) return
+    setRestoringKey(b.key)
+    try {
+      const updates: Record<string, unknown> = {}
+      const [guestSnap, matchesNode] = await Promise.all([
+        get(ref(db, `${ROOT}/guestUsers/${b.guestId}`)),
+        readNode('matches'),
+      ])
+      if (!guestSnap.exists()) updates[`guestUsers/${b.guestId}`] = b.guest
+      ;(b.entries ?? []).forEach(({ id, value }) => { updates[`chouseisanEntries/${id}`] = value })
+      await Promise.all((b.byName ?? []).map(async ({ path, value }) => {
+        const snap = await get(ref(db, `${ROOT}/${path}`))
+        if (!snap.exists()) updates[path] = value
+      }))
+      if (b.matches && b.matches.length > 0) {
+        const merged = [...(Object.values(matchesNode) as Match[]), ...b.matches]
+        updates['matches'] = Object.fromEntries(merged.map((m, i) => [String(i), m]))
+      }
+      await update(ref(db, ROOT), updates)
+      await remove(ref(db, `${BACKUP_ROOT}/${b.key}`))
+      setRestoreMsg(`「${b.name || b.guestId}」を元に戻しました。`)
+    } catch (e) {
+      console.error(e)
+      alert('元に戻せませんでした。')
+    } finally {
+      setRestoringKey(null)
+    }
+  }
+
+  const discardBackup = async (b: GuestBackup) => {
+    if (!confirm('この控えを破棄します。元に戻せなくなります。よろしいですか？')) return
+    await remove(ref(db, `${BACKUP_ROOT}/${b.key}`))
   }
 
   // 残す項目がある場合の注意書き
@@ -590,7 +706,7 @@ export function Admin({ currentRole }: Props) {
                         <button className="btn-small" onClick={() => setEditingId(null)}>✕</button>
                       </div>
                     ) : (
-                      <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed rgba(16,72,60,0.2)' }}
+                      <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed rgba(var(--ink-rgb),0.2)' }}
                         onClick={() => handleStartEditName(entry)}
                         title="クリックして編集">
                         {entry.record.name ?? '—'}
@@ -609,9 +725,9 @@ export function Admin({ currentRole }: Props) {
                       onClick={() => handleToggleManagementOnly(entry)}
                       style={{
                         padding: '3px 8px', borderRadius: 100, fontSize: 11, fontWeight: 700,
-                        border: `1px solid ${entry.record.managementOnly ? 'rgba(124,58,237,0.4)' : 'rgba(5,150,105,0.3)'}`,
-                        background: entry.record.managementOnly ? 'rgba(124,58,237,0.15)' : 'rgba(5,150,105,0.12)',
-                        color: entry.record.managementOnly ? '#7c3aed' : 'var(--accent)',
+                        border: `1px solid ${entry.record.managementOnly ? 'rgba(var(--purple-rgb),0.4)' : 'rgba(var(--accent-rgb),0.3)'}`,
+                        background: entry.record.managementOnly ? 'rgba(var(--purple-rgb),0.15)' : 'rgba(var(--accent-rgb),0.12)',
+                        color: entry.record.managementOnly ? 'var(--purple)' : 'var(--accent)',
                         cursor: 'pointer', fontFamily: "'Noto Sans JP', sans-serif", whiteSpace: 'nowrap',
                       }}>
                       {entry.record.managementOnly ? '管理専用' : '参加者'}
@@ -624,8 +740,8 @@ export function Admin({ currentRole }: Props) {
                         onClick={() => handleToggleLevel(entry)}
                         style={{
                           padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 700,
-                          border: `1px solid ${entry.record.level === 'exp' ? 'rgba(5,150,105,0.3)' : 'rgba(2,132,199,0.3)'}`,
-                          background: entry.record.level === 'exp' ? 'rgba(5,150,105,0.13)' : 'rgba(2,132,199,0.13)',
+                          border: `1px solid ${entry.record.level === 'exp' ? 'rgba(var(--accent-rgb),0.3)' : 'rgba(var(--blue-rgb),0.3)'}`,
+                          background: entry.record.level === 'exp' ? 'rgba(var(--accent-rgb),0.13)' : 'rgba(var(--blue-rgb),0.13)',
                           color: entry.record.level === 'exp' ? 'var(--accent)' : 'var(--blue)',
                           cursor: 'pointer', fontFamily: "'Noto Sans JP', sans-serif",
                         }}>
@@ -718,13 +834,40 @@ export function Admin({ currentRole }: Props) {
         )}
       </section>
 
+      {restoreMsg && <p style={{ fontSize: 12, color: 'var(--accent)', margin: '0 0 1rem' }}>✅ {restoreMsg}</p>}
+
+      {liveBackups.length > 0 && (
+        <section className="admin-section">
+          <h3 className="admin-subtitle">最近削除したゲスト（次の午前3時まで元に戻せます）</h3>
+          <table className="admin-table">
+            <tbody>
+              {liveBackups.map(b => (
+                <tr key={b.key}>
+                  <td>{b.name || b.guestId}</td>
+                  <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(b.at).toLocaleString('ja-JP')}</td>
+                  <td className="admin-actions">
+                    <button className="btn-small" onClick={() => restoreGuest(b)} disabled={restoringKey === b.key}>
+                      {restoringKey === b.key ? '復元中…' : '元に戻す'}
+                    </button>
+                    <button className="btn-small btn-danger" onClick={() => discardBackup(b)}>控えを破棄</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.6 }}>
+            ※控えは管理者・オーナーだけが見られます。毎日午前3時（日本時間）の自動掃除で、控えとログイン用アカウントが完全に消えます。
+          </p>
+        </section>
+      )}
+
       {/* ゲスト削除の確認ウィンドウ */}
       {deletePlan && (
         <div className="modal-overlay" onClick={() => { if (!deleting) setDeletePlan(null) }}>
           <div className="modal-card" style={{ maxWidth: 440, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>「{deletePlan.name || deletePlan.entry.id}」を削除</h3>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-              チェックを入れた項目が消えます（元に戻せません）。
+              チェックを入れた項目が消えます。消した内容の控えを残し、次の午前3時（自動掃除）までは「元に戻す」ができます。
             </p>
             {!deletePlan.touchName && (
               <p style={{ fontSize: 12, color: 'var(--accent3)', marginBottom: 12 }}>

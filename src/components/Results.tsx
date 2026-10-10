@@ -1,4 +1,5 @@
 import { Match, AttendanceStatus, MemberLevel } from '../types'
+import { splitPlayers } from '../matchUtils'
 
 interface Props {
   attendance: Record<string, AttendanceStatus>
@@ -21,7 +22,7 @@ export function Results({ attendance, memberLevels, matches, maskMap }: Props) {
   matches.forEach(m => {
     if (m.status !== 'done') return
     const s1 = parseInt(m.s1) || 0, s2 = parseInt(m.s2) || 0
-    const p1 = m.p1.split(' / '), p2 = m.p2.split(' / ')
+    const p1 = splitPlayers(m.p1), p2 = splitPlayers(m.p2)
     p1.forEach(p => { if (wins[p]) { wins[p].pf += s1; wins[p].pa += s2 } })
     p2.forEach(p => { if (wins[p]) { wins[p].pf += s2; wins[p].pa += s1 } })
     if (s1 > s2) {

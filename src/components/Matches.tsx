@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Match, MatchType, TierFilter, AttendanceStatus, MemberLevel, UserRole } from '../types'
 import { generateSingles, generateDoubles } from '../algorithm'
+import { splitPlayers, joinPlayers } from '../matchUtils'
 
 interface Props {
   attendance: Record<string, AttendanceStatus>
@@ -20,7 +21,7 @@ interface Props {
 export function Matches({ attendance, memberLevels, matches, courts, role, ownerNames, maskMap, isActivityEnded, onGenerate, onUpdateScore, onUpdateStatus, onUpdateCourts }: Props) {
   // "田中 / 鈴木" 形式のダブルスにも対応してマスク
   const maskPlayer = (str: string) =>
-    str.split(' / ').map(n => maskMap[n] ?? n).join(' / ')
+    joinPlayers(splitPlayers(str).map(n => maskMap[n] ?? n))
   const [matchType, setMatchType]               = useState<MatchType>('singles')
   const [tierFilter, setTierFilter]             = useState<TierFilter>('all')
   const [singlesMode, setSinglesMode]           = useState<'per' | 'total' | 'none'>('per')
@@ -105,7 +106,7 @@ export function Matches({ attendance, memberLevels, matches, courts, role, owner
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginBottom: settingsOpen ? '1rem' : 0,
             paddingBottom: settingsOpen ? '0.5rem' : 0,
-            borderBottom: settingsOpen ? '1px solid rgba(16,72,60,0.1)' : 'none' }}>
+            borderBottom: settingsOpen ? '1px solid rgba(var(--ink-rgb),0.1)' : 'none' }}>
             <span style={{ fontSize: 14, fontWeight: 700 }}>⚙️ 試合設定</span>
             <button className="btn btn-sm" onClick={() => setSettingsOpen(v => !v)}>
               {settingsOpen ? '▲ 非表示' : '▼ 表示'}

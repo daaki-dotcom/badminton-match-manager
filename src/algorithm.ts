@@ -1,4 +1,5 @@
 import { Match } from './types'
+import { splitPlayers, joinPlayers } from './matchUtils'
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -186,14 +187,14 @@ export function generateDoubles(opts: GenerateOptions): Match[] | null {
     if (!relaxConsec && ruleConsec && rounds.length > 0) {
       const prev = rounds[rounds.length - 1]
       prev.forEach(m => {
-        m.p1.split(' / ').forEach((p: string) => prevRoundPlayers.add(p))
-        m.p2.split(' / ').forEach((p: string) => prevRoundPlayers.add(p))
+        splitPlayers(m.p1).forEach((p: string) => prevRoundPlayers.add(p))
+        splitPlayers(m.p2).forEach((p: string) => prevRoundPlayers.add(p))
       })
     }
 
     const phase1Done = pool.every(p => playCount[p] >= 1)
     const prevRoundPairs = rounds.length > 0
-      ? rounds[rounds.length - 1].map(m => [m.p1.split(' / '), m.p2.split(' / ')])
+      ? rounds[rounds.length - 1].map(m => [splitPlayers(m.p1), splitPlayers(m.p2)])
       : []
 
     for (let slot = 0; slot < courts && generated.length + round.length < maxGames; slot++) {
@@ -249,7 +250,7 @@ export function generateDoubles(opts: GenerateOptions): Match[] | null {
       bestMatch.t1.forEach(p => { playCount[p]++; usedThisRound.add(p) })
       bestMatch.t2.forEach(p => { playCount[p]++; usedThisRound.add(p) })
 
-      round.push({ p1: bestMatch.t1.join(' / '), p2: bestMatch.t2.join(' / '), s1: '', s2: '', status: 'wait', court: 0 })
+      round.push({ p1: joinPlayers(bestMatch.t1), p2: joinPlayers(bestMatch.t2), s1: '', s2: '', status: 'wait', court: 0 })
       failStreak = 0
     }
 

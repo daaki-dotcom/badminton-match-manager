@@ -179,8 +179,8 @@ export function AdminSchedule() {
                   title={alreadyAdded ? '追加済み' : key}
                   style={{
                     padding: '6px 0', borderRadius: 6, fontSize: 12, textAlign: 'center',
-                    border: `1px solid ${isSelected ? 'var(--accent)' : 'rgba(16,72,60,0.15)'}`,
-                    background: alreadyAdded ? 'rgba(16,72,60,0.1)' : isSelected ? 'rgba(5,150,105,0.2)' : 'transparent',
+                    border: `1px solid ${isSelected ? 'var(--accent)' : 'rgba(var(--ink-rgb),0.15)'}`,
+                    background: alreadyAdded ? 'rgba(var(--ink-rgb),0.1)' : isSelected ? 'rgba(var(--accent-rgb),0.2)' : 'transparent',
                     color: alreadyAdded ? 'var(--text-muted)' : isSelected ? 'var(--accent)' : 'var(--text)',
                     cursor: alreadyAdded ? 'default' : 'pointer',
                     fontFamily: "'Noto Sans JP', sans-serif",

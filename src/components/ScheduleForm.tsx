@@ -3,6 +3,7 @@ import { ref, onValue, push, set, update } from 'firebase/database'
 import { db, ROOT } from '../firebase'
 import { hashPassword, generateGuestId, createAuthAccount } from '../auth'
 import { ChouseisanEntry, AttendanceStatus, MemberLevel, UserRecord, GuestUserRecord } from '../types'
+import { isValidPlayerName, INVALID_NAME_MESSAGE } from '../matchUtils'
 
 const INITIAL_PASSWORD = 'boldbad'
 const SYMBOL: Record<AttendanceStatus, string> = { yes: '○', no: '✕', undecided: '△', '': '？' }
@@ -70,6 +71,7 @@ export function ScheduleForm({ onBack }: Props) {
 
   const goConfirm = () => {
     if (!name.trim()) return
+    if (!isValidPlayerName(name)) { alert(INVALID_NAME_MESSAGE); return }
     setStep('confirm')
   }
 
