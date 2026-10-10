@@ -105,7 +105,7 @@ export function Matches({ attendance, memberLevels, matches, courts, role, owner
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginBottom: settingsOpen ? '1rem' : 0,
             paddingBottom: settingsOpen ? '0.5rem' : 0,
-            borderBottom: settingsOpen ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
+            borderBottom: settingsOpen ? '1px solid rgba(16,72,60,0.1)' : 'none' }}>
             <span style={{ fontSize: 14, fontWeight: 700 }}>⚙️ 試合設定</span>
             <button className="btn btn-sm" onClick={() => setSettingsOpen(v => !v)}>
               {settingsOpen ? '▲ 非表示' : '▼ 表示'}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ref, get, set, remove, update, onValue } from 'firebase/database'
 import { db, ROOT } from '../firebase'
 import { hashPassword, createAuthAccount } from '../auth'
-import { UserRecord, MemberLevel, GuestUserRecord } from '../types'
+import { UserRecord, MemberLevel, GuestUserRecord, ChouseisanEntry, Match } from '../types'
 import { AdminSchedule } from './AdminSchedule'
 
 const INITIAL_PASSWORD = 'nicesoul'
@@ -13,6 +13,12 @@ function generateRandomId(): string {
   return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
+// Firebase の指定ノードを丸ごと読む（存在しなければ空オブジェクト）
+async function readNode(path: string): Promise<Record<string, unknown>> {
+  const snap = await get(ref(db, `${ROOT}/${path}`))
+  return snap.exists() ? (snap.val() as Record<string, unknown>) : {}
+}
+
 interface UserEntry {
   id: string
   record: UserRecord
@@ -21,6 +27,25 @@ interface UserEntry {
 interface GuestEntry {
   id: string
   record: GuestUserRecord
+}
+
+interface GuestDeleteRow {
+  key: string
+  label: string
+  value: string
+  locked?: boolean
+  nameKeyed?: boolean
+}
+
+interface GuestDeletePlan {
+  entry: GuestEntry
+  name: string
+  linkedIds: string[]
+  touchName: boolean
+  hitMatches: Match[]
+  allMatches: Match[]
+  rows: GuestDeleteRow[]
+  hasAttendance: boolean
 }
 
 interface Props {
@@ -59,6 +84,9 @@ export function Admin({ currentRole }: Props) {
   const [guests, setGuests]             = useState<GuestEntry[]>([])
   const [guestsLoading, setGuestsLoading] = useState(true)
   const [copiedGuestListId, setCopiedGuestListId] = useState<string | null>(null)
+  const [deletePlan, setDeletePlan]     = useState<GuestDeletePlan | null>(null)
+  const [deleteChecks, setDeleteChecks] = useState<Record<string, boolean>>({})
+  const [deleting, setDeleting]         = useState(false)
 
 
   const fetchUsers = async () => {
@@ -309,9 +337,95 @@ export function Admin({ currentRole }: Props) {
     await fetchUsers()
   }
 
-  const handleDeleteGuest = async (entry: GuestEntry) => {
-    if (!confirm(`${entry.record.name ?? entry.id} を削除しますか？`)) return
-    await remove(ref(db, `${ROOT}/guestUsers/${entry.id}`))
+  // ゲスト削除：確認ウィンドウで、消す項目を管理者がチェックで選ぶ（初期値はすべてON）
+  const openDeleteGuest = async (entry: GuestEntry) => {
+    const name = entry.record.name ?? ''
+    const norm = (s: string) => s.replace(/[ 　]/g, '')
+
+    const [chNode, usersNode, guestsNode, attendance, levels, comments, party, payClub, payParty, matchesNode] = await Promise.all([
+      readNode('chouseisanEntries'), readNode('users'), readNode('guestUsers'), readNode('attendance'),
+      readNode('memberLevels'), readNode('attendanceComments'), readNode('party'),
+      readNode('paymentClub'), readNode('paymentParty'), readNode('matches'),
+    ])
+
+    const linkedIds = Object.entries(chNode)
+      .filter(([, v]) => (v as ChouseisanEntry).linkedGuestId === entry.id)
+      .map(([id]) => id)
+
+    // 同じ名前の別の登録（正規部員・別のゲスト）がある場合、名前単位のデータは巻き込まないよう選べなくする
+    const sameNameElsewhere =
+      Object.values(usersNode).some(u => norm((u as UserRecord).name ?? '') === norm(name)) ||
+      Object.entries(guestsNode).some(([id, g]) => id !== entry.id && norm((g as GuestUserRecord).name ?? '') === norm(name))
+    const touchName = name !== '' && !sameNameElsewhere
+
+    const attLabel: Record<string, string> = { yes: '参加', no: '不参加', undecided: '未定' }
+    const lvLabel: Record<string, string> = { exp: '経験者', nov: '未経験者' }
+    const partyLabel: Record<string, string> = { yes: '参加', no: '不参加' }
+    const payLabel = (v: unknown) => (v === undefined ? 'なし' : v ? '済' : '未')
+
+    const allMatches = Object.values(matchesNode) as Match[]
+    const hitMatches = touchName
+      ? allMatches.filter(m => m.p1.split(' / ').includes(name) || m.p2.split(' / ').includes(name))
+      : []
+    const scored = hitMatches.filter(m => m.s1 !== '' || m.s2 !== '').length
+    const comment = comments[name] ? `「${String(comments[name])}」` : 'なし'
+
+    const rows: GuestDeleteRow[] = [
+      { key: 'login', label: 'ログインID（ゲスト一覧）', value: entry.id, locked: true },
+      { key: 'answers', label: '回答一覧の回答', value: `${linkedIds.length}件` },
+      { key: 'attendance', label: '出欠', value: attLabel[attendance[name] as string] ?? 'なし', nameKeyed: true },
+      { key: 'level', label: 'レベル', value: lvLabel[levels[name] as string] ?? 'なし', nameKeyed: true },
+      { key: 'comment', label: 'コメント', value: comment, nameKeyed: true },
+      { key: 'party', label: '懇親会の回答', value: partyLabel[party[name] as string] ?? 'なし', nameKeyed: true },
+      { key: 'payment', label: '支払い', value: `部活参加費 ${payLabel(payClub[name])} ／ 懇親会費 ${payLabel(payParty[name])}`, nameKeyed: true },
+      { key: 'matches', label: '試合', value: `${hitMatches.length}件（スコア入力済 ${scored}件）`, nameKeyed: true },
+    ]
+    const checks: Record<string, boolean> = {}
+    rows.forEach(r => { checks[r.key] = r.nameKeyed ? touchName : true })
+
+    setDeleteChecks(checks)
+    setDeletePlan({ entry, name, linkedIds, touchName, hitMatches, allMatches, rows, hasAttendance: attendance[name] !== undefined })
+  }
+
+  const executeDeleteGuest = async () => {
+    if (!deletePlan) return
+    const { entry, name, linkedIds, touchName, hitMatches, allMatches } = deletePlan
+    const c = deleteChecks
+    setDeleting(true)
+    try {
+      // 複数の場所をまとめて1回の更新で消す（途中で失敗して中途半端に残らないようにする）
+      const updates: Record<string, unknown> = { [`guestUsers/${entry.id}`]: null }
+      if (c.answers) linkedIds.forEach(id => { updates[`chouseisanEntries/${id}`] = null })
+      if (touchName) {
+        if (c.attendance) updates[`attendance/${name}`] = null
+        if (c.level)      updates[`memberLevels/${name}`] = null
+        if (c.comment)    updates[`attendanceComments/${name}`] = null
+        if (c.party)      updates[`party/${name}`] = null
+        if (c.payment) {
+          updates[`paymentClub/${name}`] = null
+          updates[`paymentParty/${name}`] = null
+        }
+        if (c.matches && hitMatches.length > 0) {
+          const rest = allMatches.filter(m => !hitMatches.includes(m))
+          updates['matches'] = rest.length > 0 ? Object.fromEntries(rest.map((m, i) => [String(i), m])) : null
+        }
+      }
+      await update(ref(db, ROOT), updates)
+      setDeletePlan(null)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // 残す項目がある場合の注意書き
+  const deleteWarnings: string[] = []
+  if (deletePlan) {
+    const c = deleteChecks
+    const p = deletePlan
+    if (p.touchName && !c.attendance && p.hasAttendance) deleteWarnings.push('出欠を残すと、ログインできない参加者として次回以降の組み合わせ対象に残ります')
+    if (!c.answers && p.linkedIds.length > 0) deleteWarnings.push('回答一覧の回答を残すと、削除済みIDとの紐づけが切れた状態で残ります')
+    if (p.touchName && !c.matches && p.hitMatches.length > 0) deleteWarnings.push('試合を残すと、削除した人の名前が組み合わせ・スコアに残ります')
+    if (p.touchName && c.matches && p.hitMatches.length > 0) deleteWarnings.push('該当の試合は組み合わせから取り除かれ、残りの試合が詰めて並び直されます')
   }
 
   const copyGuestId = (entry: GuestEntry) => {
@@ -476,7 +590,7 @@ export function Admin({ currentRole }: Props) {
                         <button className="btn-small" onClick={() => setEditingId(null)}>✕</button>
                       </div>
                     ) : (
-                      <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed rgba(255,255,255,0.2)' }}
+                      <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed rgba(16,72,60,0.2)' }}
                         onClick={() => handleStartEditName(entry)}
                         title="クリックして編集">
                         {entry.record.name ?? '—'}
@@ -495,9 +609,9 @@ export function Admin({ currentRole }: Props) {
                       onClick={() => handleToggleManagementOnly(entry)}
                       style={{
                         padding: '3px 8px', borderRadius: 100, fontSize: 11, fontWeight: 700,
-                        border: `1px solid ${entry.record.managementOnly ? 'rgba(167,139,250,0.4)' : 'rgba(110,231,183,0.3)'}`,
-                        background: entry.record.managementOnly ? 'rgba(167,139,250,0.15)' : 'rgba(110,231,183,0.12)',
-                        color: entry.record.managementOnly ? '#a78bfa' : 'var(--accent)',
+                        border: `1px solid ${entry.record.managementOnly ? 'rgba(124,58,237,0.4)' : 'rgba(5,150,105,0.3)'}`,
+                        background: entry.record.managementOnly ? 'rgba(124,58,237,0.15)' : 'rgba(5,150,105,0.12)',
+                        color: entry.record.managementOnly ? '#7c3aed' : 'var(--accent)',
                         cursor: 'pointer', fontFamily: "'Noto Sans JP', sans-serif", whiteSpace: 'nowrap',
                       }}>
                       {entry.record.managementOnly ? '管理専用' : '参加者'}
@@ -510,8 +624,8 @@ export function Admin({ currentRole }: Props) {
                         onClick={() => handleToggleLevel(entry)}
                         style={{
                           padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 700,
-                          border: `1px solid ${entry.record.level === 'exp' ? 'rgba(110,231,183,0.3)' : 'rgba(96,165,250,0.3)'}`,
-                          background: entry.record.level === 'exp' ? 'rgba(110,231,183,0.13)' : 'rgba(96,165,250,0.13)',
+                          border: `1px solid ${entry.record.level === 'exp' ? 'rgba(5,150,105,0.3)' : 'rgba(2,132,199,0.3)'}`,
+                          background: entry.record.level === 'exp' ? 'rgba(5,150,105,0.13)' : 'rgba(2,132,199,0.13)',
                           color: entry.record.level === 'exp' ? 'var(--accent)' : 'var(--blue)',
                           cursor: 'pointer', fontFamily: "'Noto Sans JP', sans-serif",
                         }}>
@@ -593,7 +707,7 @@ export function Admin({ currentRole }: Props) {
                     <button className="btn-small" onClick={() => copyGuestId(entry)}>
                       {copiedGuestListId === entry.id ? '✅' : 'IDをコピー'}
                     </button>
-                    <button className="btn-small btn-danger" onClick={() => handleDeleteGuest(entry)}>
+                    <button className="btn-small btn-danger" onClick={() => openDeleteGuest(entry)}>
                       削除
                     </button>
                   </td>
@@ -603,6 +717,55 @@ export function Admin({ currentRole }: Props) {
           </table>
         )}
       </section>
+
+      {/* ゲスト削除の確認ウィンドウ */}
+      {deletePlan && (
+        <div className="modal-overlay" onClick={() => { if (!deleting) setDeletePlan(null) }}>
+          <div className="modal-card" style={{ maxWidth: 440, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>「{deletePlan.name || deletePlan.entry.id}」を削除</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+              チェックを入れた項目が消えます（元に戻せません）。
+            </p>
+            {!deletePlan.touchName && (
+              <p style={{ fontSize: 12, color: 'var(--accent3)', marginBottom: 12 }}>
+                同じ名前の別の登録（正規部員または別のゲスト）があるため、名前単位の項目（出欠・レベル・コメント・懇親会・支払い・試合）は選べません。
+              </p>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+              {deletePlan.rows.map(r => {
+                const disabled = !!r.locked || (!!r.nameKeyed && !deletePlan.touchName)
+                return (
+                  <label key={r.key} style={{
+                    display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 10px',
+                    background: 'var(--surface2)', borderRadius: 'var(--radius-sm)',
+                    opacity: disabled ? 0.6 : 1, cursor: disabled ? 'default' : 'pointer',
+                  }}>
+                    <input type="checkbox" checked={!!deleteChecks[r.key]} disabled={disabled}
+                      onChange={e => setDeleteChecks(prev => ({ ...prev, [r.key]: e.target.checked }))}
+                      style={{ marginTop: 3 }} />
+                    <span style={{ fontSize: 13, lineHeight: 1.5 }}>
+                      <strong>{r.label}</strong>{r.locked ? '（必ず削除）' : ''}<br />
+                      <span style={{ color: 'var(--text-muted)', wordBreak: 'break-all' }}>{r.value}</span>
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+            {deleteWarnings.length > 0 && (
+              <ul style={{ fontSize: 12, color: 'var(--accent3)', paddingLeft: '1.2em', marginBottom: 12, lineHeight: 1.6 }}>
+                {deleteWarnings.map(w => <li key={w}>{w}</li>)}
+              </ul>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeletePlan(null)} disabled={deleting}>キャンセル</button>
+              <button className="btn-primary" onClick={executeDeleteGuest} disabled={deleting}
+                style={{ background: 'var(--red)' }}>
+                {deleting ? '削除中…' : '削除する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

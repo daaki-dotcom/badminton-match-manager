@@ -57,7 +57,7 @@ export function Home({ authUser, state, isManagementOnly, isActivityEnded, onSub
     <div className="home">
       {/* 活動終了バナー */}
       {isActivityEnded && (
-        <div className="card" style={{ borderColor: 'rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.08)', textAlign: 'center' }}>
+        <div className="card" style={{ borderColor: 'rgba(220,38,38,0.3)', background: 'rgba(220,38,38,0.08)', textAlign: 'center' }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--red)' }}>🔒 活動は終了しました</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>データの編集はできません（閲覧のみ）</div>
         </div>
@@ -142,17 +142,17 @@ export function Home({ authUser, state, isManagementOnly, isActivityEnded, onSub
           </div>
           <div className="fmt-group" style={{ marginBottom: 0 }}>
             <button className={`fmt-btn ${myStatus === 'yes' ? 'selected' : ''}`}
-              style={{ color: 'var(--accent)', borderColor: 'rgba(110,231,183,0.4)' }}
+              style={{ color: 'var(--accent)', borderColor: 'rgba(5,150,105,0.4)' }}
               onClick={() => handleAttendance('yes')}>
               参加
             </button>
             <button className={`fmt-btn ${myStatus === 'no' ? 'selected' : ''}`}
-              style={{ color: 'var(--red)', borderColor: 'rgba(248,113,113,0.4)' }}
+              style={{ color: 'var(--red)', borderColor: 'rgba(220,38,38,0.4)' }}
               onClick={() => handleAttendance('no')}>
               不参加
             </button>
             <button className={`fmt-btn ${myStatus === 'undecided' ? 'selected' : ''}`}
-              style={{ color: 'var(--accent3)', borderColor: 'rgba(251,191,36,0.4)' }}
+              style={{ color: 'var(--accent3)', borderColor: 'rgba(217,119,6,0.4)' }}
               onClick={() => handleAttendance('undecided')}>
               未定
             </button>

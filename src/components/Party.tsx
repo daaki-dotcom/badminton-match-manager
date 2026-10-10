@@ -39,10 +39,10 @@ export function Party({ attendance, party, role, authUserName, maskMap, isActivi
         {(['yes', 'no'] as PartyStatus[]).map(val => {
           const isSelected = party[name] === val
           const color = val === 'yes' ? 'var(--accent)' : 'var(--red)'
-          const bg    = val === 'yes' ? 'rgba(110,231,183,0.2)' : 'rgba(248,113,113,0.15)'
+          const bg    = val === 'yes' ? 'rgba(5,150,105,0.2)' : 'rgba(220,38,38,0.15)'
           return (
             <button key={val} onClick={() => onSetParty(name, isSelected ? '' : val)}
-              style={{ padding: '5px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Noto Sans JP', sans-serif", border: `1.5px solid ${isSelected ? color : 'rgba(255,255,255,0.2)'}`, background: isSelected ? bg : 'var(--surface2)', color: isSelected ? color : 'var(--text-muted)' }}>
+              style={{ padding: '5px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Noto Sans JP', sans-serif", border: `1.5px solid ${isSelected ? color : 'rgba(16,72,60,0.2)'}`, background: isSelected ? bg : 'var(--surface2)', color: isSelected ? color : 'var(--text-muted)' }}>
               {val === 'yes' ? '参加' : '不参加'}
             </button>
           )
@@ -51,7 +51,7 @@ export function Party({ attendance, party, role, authUserName, maskMap, isActivi
     )
   }
 
-  const RowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '8px 4px', gap: 6 }
+  const RowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(16,72,60,0.1)', padding: '8px 4px', gap: 6 }
 
   return (
     <div>
@@ -70,7 +70,7 @@ export function Party({ attendance, party, role, authUserName, maskMap, isActivi
       )}
 
       <div className="card" style={{ paddingBottom: '0.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(16,72,60,0.1)' }}>
           <div className="card-title" style={{ marginBottom: 0, paddingBottom: 0, borderBottom: 'none' }}>懇親会参加確認</div>
           <button className="btn btn-sm" onClick={() => setShowAll(!showAll)}>
             {showAll ? '未回答のみ表示' : '回答済みを表示'}
@@ -86,12 +86,12 @@ export function Party({ attendance, party, role, authUserName, maskMap, isActivi
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: 6 }}>参加 {yesCount}人</div>
               <div style={{ fontSize: 14, lineHeight: 2 }}>{attendees.filter(n => party[n] === 'yes').map(d).join('　') || '—'}</div>
             </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12 }}>
+            <div style={{ borderTop: '1px solid rgba(16,72,60,0.1)', paddingTop: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', letterSpacing: '0.06em', marginBottom: 6 }}>不参加 {noCount}人</div>
               <div style={{ fontSize: 14, lineHeight: 2 }}>{attendees.filter(n => party[n] === 'no').map(d).join('　') || '—'}</div>
             </div>
             {isAdmin && (
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10, marginTop: 4 }}>
+              <div style={{ borderTop: '1px solid rgba(16,72,60,0.1)', paddingTop: 10, marginTop: 4 }}>
                 <button className="btn btn-sm btn-danger" style={{ width: '100%' }}
                   onClick={() => confirm('懇親会の回答をリセットしますか？') && onResetParty()}>
                   回答をリセット

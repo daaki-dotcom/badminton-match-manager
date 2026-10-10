@@ -108,9 +108,9 @@ export function Attendance({ attendance, activityDate, role, onSubmit, onRemove,
               placeholder="名前を入力" />
           </div>
           <div className="fmt-group" style={{ marginBottom: 0 }}>
-            <button className="fmt-btn" onClick={() => handleSubmit('yes')} style={{ color: 'var(--accent)', borderColor: 'rgba(110,231,183,0.4)' }}>参加</button>
-            <button className="fmt-btn" onClick={() => handleSubmit('no')} style={{ color: 'var(--red)', borderColor: 'rgba(248,113,113,0.4)' }}>不参加</button>
-            <button className="fmt-btn" onClick={() => handleSubmit('undecided')} style={{ color: 'var(--accent3)', borderColor: 'rgba(251,191,36,0.4)' }}>未定</button>
+            <button className="fmt-btn" onClick={() => handleSubmit('yes')} style={{ color: 'var(--accent)', borderColor: 'rgba(5,150,105,0.4)' }}>参加</button>
+            <button className="fmt-btn" onClick={() => handleSubmit('no')} style={{ color: 'var(--red)', borderColor: 'rgba(220,38,38,0.4)' }}>不参加</button>
+            <button className="fmt-btn" onClick={() => handleSubmit('undecided')} style={{ color: 'var(--accent3)', borderColor: 'rgba(217,119,6,0.4)' }}>未定</button>
           </div>
         </div>
       )}
@@ -127,7 +127,7 @@ export function Attendance({ attendance, activityDate, role, onSubmit, onRemove,
             </button>
           </div>
           {showList && (
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.75rem', marginBottom: '0.75rem' }}>
+            <div style={{ borderTop: '1px solid rgba(16,72,60,0.1)', paddingTop: '0.75rem', marginBottom: '0.75rem' }}>
               {yesList.map(name => (
                 <div key={name} style={{ fontSize: 14, lineHeight: 2 }}>{name}</div>
               ))}
