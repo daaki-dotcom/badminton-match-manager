@@ -3,6 +3,7 @@ import { ref, onValue, push, set, update } from 'firebase/database'
 import { db, ROOT } from '../firebase'
 import { hashPassword, generateGuestId, createAuthAccount } from '../auth'
 import { ChouseisanEntry, AttendanceStatus, MemberLevel, UserRecord, GuestUserRecord } from '../types'
+import { tryConsumeSubmit } from '../rateLimit'
 import { isValidPlayerName, INVALID_NAME_MESSAGE } from '../matchUtils'
 
 const INITIAL_PASSWORD = 'boldbad'
@@ -76,6 +77,8 @@ export function ScheduleForm({ onBack }: Props) {
   }
 
   const persistEntry = async (entryId: string | null, isUpdate: boolean) => {
+    const limitMessage = tryConsumeSubmit()
+    if (limitMessage) { alert(limitMessage); return }
     const now = Date.now()
     const normalized = normalize(name)
     const isMember = memberNames.some(n => normalize(n) === normalized)
