@@ -83,7 +83,12 @@ export default function App() {
 
   // 未ログイン → ログイン画面を表示
   if (!authUser) {
-    return <Login onLogin={handleLoginComplete} />
+    return (
+      <div className="public-shell">
+        <Login onLogin={handleLoginComplete} />
+        <Footer />
+      </div>
+    )
   }
 
   // 初回ログイン → パスワード変更を強制

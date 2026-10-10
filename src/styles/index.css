@@ -297,6 +297,9 @@ input[type=date] { color-scheme: light; }
 .home-nav-icon { font-size: 20px; }
 
 /* Login screen */
+/* ログイン前の画面：フッターを画面の一番下に置く */
+.public-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.public-shell > .login-screen { flex: 1; min-height: 0; }
 .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: var(--bg); }
 .login-card { background: var(--surface); border: 2px solid rgba(var(--ink-rgb),0.18); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 360px; }
 .login-title { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 1rem; }
