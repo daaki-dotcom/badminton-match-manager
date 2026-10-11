@@ -5,7 +5,7 @@ import { hashPassword, createAuthAccount } from '../auth'
 import { UserRecord, MemberLevel, GuestUserRecord, ChouseisanEntry, Match } from '../types'
 import { AdminSchedule } from './AdminSchedule'
 import { BACKUP_ROOT, GuestBackup, nextCleanupAt, readNode } from '../guestBackup'
-import { matchHasPlayer, isValidPlayerName, INVALID_NAME_MESSAGE } from '../matchUtils'
+import { matchHasPlayer, isValidPlayerName, isSampleName, INVALID_NAME_MESSAGE } from '../matchUtils'
 
 const INITIAL_PASSWORD = 'nicesoul'
 const MAX_ADMIN = 4
@@ -376,7 +376,7 @@ export function Admin({ currentRole }: Props) {
     const sameNameElsewhere =
       Object.values(usersNode).some(u => norm((u as UserRecord).name ?? '') === norm(name)) ||
       Object.entries(guestsNode).some(([id, g]) => id !== entry.id && norm((g as GuestUserRecord).name ?? '') === norm(name))
-    const touchName = name !== '' && !sameNameElsewhere
+    const touchName = name !== '' && !sameNameElsewhere && !isSampleName(name)
 
     const attLabel: Record<string, string> = { yes: '参加', no: '不参加', undecided: '未定' }
     const lvLabel: Record<string, string> = { exp: '経験者', nov: '未経験者' }

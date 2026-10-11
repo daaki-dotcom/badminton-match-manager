@@ -1,7 +1,7 @@
 import { ref, get, set, update, remove } from 'firebase/database'
 import { db, ROOT } from './firebase'
 import { ChouseisanEntry, GuestUserRecord, Match } from './types'
-import { matchHasPlayer } from './matchUtils'
+import { matchHasPlayer, isSampleName } from './matchUtils'
 
 // 削除したゲスト・回答の控え。管理者・オーナーだけが読み書きできる場所（badminton の外）に保存する。
 // 次の午前3時（日本時間）の自動掃除までは「元に戻す」ができる
@@ -68,7 +68,7 @@ export async function planEntryDeletion(entry: ChouseisanEntry): Promise<EntryDe
     Object.values(users).some(u => norm((u as { name?: string }).name ?? '') === norm(name)) ||
     Object.entries(guests).some(([id, g]) => id !== guestId && norm((g as GuestUserRecord).name ?? '') === norm(name)) ||
     Object.entries(ch).some(([id, v]) => !entryIds.includes(id) && norm((v as ChouseisanEntry).name ?? '') === norm(name))
-  const touchName = name !== '' && !sameNameElsewhere
+  const touchName = name !== '' && !sameNameElsewhere && !isSampleName(name)
 
   const byName: EntryDeletePlan['byName'] = []
   const add = (node: string, label: string, values: Record<string, unknown>) => {

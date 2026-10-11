@@ -14,3 +14,7 @@ export const matchHasPlayer = (m: Match, name: string): boolean =>
 // 区切り文字「/」を含む名前は、組み合わせの文字列を壊すため登録させない
 export const isValidPlayerName = (name: string): boolean => !name.includes('/')
 export const INVALID_NAME_MESSAGE = '名前に「/」は使えません'
+
+// 表示用のサンプル参加者。一覧には出すが、組み合わせ・削除など実際の処理には関わらせない
+export const SAMPLE_NAMES = ['田中太郎']
+export const isSampleName = (name: string): boolean => SAMPLE_NAMES.includes(name.replace(/[ 　]/g, ''))
