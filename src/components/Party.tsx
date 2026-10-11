@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AttendanceStatus, PartyStatus, UserRole } from '../types'
+import { isSampleName, SAMPLE_LABEL } from '../matchUtils'
 
 interface Props {
   attendance: Record<string, AttendanceStatus>
@@ -16,7 +17,9 @@ export function Party({ attendance, party, role, authUserName, maskMap, isActivi
   const d = (name: string) => maskMap[name] ?? name
   const [showAll, setShowAll] = useState(false)
 
-  const attendees    = Object.keys(attendance).filter(n => attendance[n] === 'yes')
+  // サンプル参加者は表示のみ。人数・回答の集計や回答操作には含めない
+  const samples      = Object.keys(attendance).filter(n => attendance[n] === 'yes' && isSampleName(n))
+  const attendees    = Object.keys(attendance).filter(n => attendance[n] === 'yes' && !isSampleName(n))
   const yesCount     = attendees.filter(n => party[n] === 'yes').length
   const noCount      = attendees.filter(n => party[n] === 'no').length
   const pendingCount = attendees.filter(n => !party[n] || (party[n] !== 'yes' && party[n] !== 'no')).length
@@ -112,6 +115,9 @@ export function Party({ attendance, party, role, authUserName, maskMap, isActivi
             </tbody>
           </table>
         )}
+        {samples.map(n => (
+          <div key={n} style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(var(--ink-rgb),0.1)' }}>{n + SAMPLE_LABEL}</div>
+        ))}
       </div>
     </div>
   )
