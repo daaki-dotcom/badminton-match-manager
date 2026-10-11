@@ -1,3 +1,4 @@
+import { isSampleName } from '../matchUtils'
 import { Match, AttendanceStatus, UserRole } from '../types'
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
 }
 
 export function Header({ attendance, matches, connected, syncing, role, onLogout, onOpenSettings }: Props) {
-  const attendCount = Object.values(attendance).filter(v => v === 'yes').length
+  const attendCount = Object.entries(attendance).filter(([n, v]) => v === 'yes' && !isSampleName(n)).length
   const matchCount  = matches.length
   const doneCount   = matches.filter(m => m.status === 'done').length
 

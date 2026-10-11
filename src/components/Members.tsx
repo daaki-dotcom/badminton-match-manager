@@ -1,3 +1,4 @@
+import { isSampleName, SAMPLE_LABEL } from '../matchUtils'
 import { useState } from 'react'
 import { AttendanceStatus, MemberLevel, UserRole } from '../types'
 
@@ -23,7 +24,7 @@ export function Members({
   onToggleLevel, onTogglePaymentClub, onTogglePaymentParty,
 }: Props) {
   const masked = Object.keys(maskMap).length > 0
-  const d = (name: string) => maskMap[name] ?? name
+  const d = (name: string) => (maskMap[name] ?? name) + (isSampleName(name) ? SAMPLE_LABEL : '')
   const [showList, setShowList] = useState(false)
 
   const mgmtSet = new Set(managementOnlyNames)
@@ -38,8 +39,9 @@ export function Members({
   const getLevel      = (name: string): MemberLevel =>
     isMember(name) ? (dbLevels[name] ?? 'nov') : (memberLevels[name] ?? 'nov')
 
-  const expCount = attendees.filter(n => getLevel(n) === 'exp').length
-  const novCount = attendees.length - expCount
+  const realAttendees = attendees.filter(n => !isSampleName(n))   // サンプルは表示のみ。集計・コピーには含めない
+  const expCount = realAttendees.filter(n => getLevel(n) === 'exp').length
+  const novCount = realAttendees.length - expCount
   const isAdmin  = role === 'admin' || role === 'owner'
 
   const MemberBadge = ({ name }: { name: string }) => (
@@ -61,7 +63,7 @@ export function Members({
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
         cursor: isAdmin ? 'pointer' : 'default' }}
-        onClick={() => isAdmin && onToggleLevel(name)}>
+        onClick={() => isAdmin && !isSampleName(name) && onToggleLevel(name)}>
         <div className={`toggle-switch ${isExp ? 'on' : ''}`}>
           <div className="toggle-knob" />
         </div>
@@ -90,7 +92,7 @@ export function Members({
   return (
     <div>
       <div className="stats-grid">
-        <div className="stat-card"><div className="stat-num">{attendees.length}</div><div className="stat-label">今日の参加者</div></div>
+        <div className="stat-card"><div className="stat-num">{realAttendees.length}</div><div className="stat-label">今日の参加者</div></div>
         <div className="stat-card"><div className="stat-num" style={{ color: 'var(--accent)' }}>{expCount}</div><div className="stat-label">経験者</div></div>
         <div className="stat-card"><div className="stat-num" style={{ color: 'var(--blue)' }}>{novCount}</div><div className="stat-label">未経験者</div></div>
         <div className="stat-card"><div className="stat-num">{courts}</div><div className="stat-label">コート数</div></div>
@@ -101,7 +103,7 @@ export function Members({
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <div className="card-title" style={{ marginBottom: 0, paddingBottom: 0, borderBottom: 'none' }}>
-              参加メンバー一覧（{attendees.length}人）
+              参加メンバー一覧（{realAttendees.length}人）
             </div>
             <button className="btn btn-sm" onClick={() => setShowList(v => !v)}>
               {showList ? '▲ 非表示' : '▼ 表示'}
@@ -116,7 +118,7 @@ export function Members({
           )}
           {!masked && (
             <button className="btn btn-accent" style={{ width: '100%' }}
-              onClick={() => navigator.clipboard.writeText(attendees.join('\n'))}>
+              onClick={() => navigator.clipboard.writeText(realAttendees.join('\n'))}>
               一覧をコピー
             </button>
           )}
@@ -175,14 +177,14 @@ export function Members({
                     <PayCell
                       name={name}
                       paid={!!paymentClub[name]}
-                      onToggle={() => onTogglePaymentClub(name)}
+                      onToggle={() => !isSampleName(name) && onTogglePaymentClub(name)}
                     />
                   </td>
                   <td>
                     <PayCell
                       name={name}
                       paid={!!paymentParty[name]}
-                      onToggle={() => onTogglePaymentParty(name)}
+                      onToggle={() => !isSampleName(name) && onTogglePaymentParty(name)}
                     />
                   </td>
                 </tr>
