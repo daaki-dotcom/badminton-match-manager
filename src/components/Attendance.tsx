@@ -1,4 +1,3 @@
-import { isSampleName, SAMPLE_LABEL } from '../matchUtils'
 import { useState } from 'react'
 import { AttendanceStatus, UserRole } from '../types'
 
@@ -22,8 +21,6 @@ export function Attendance({ attendance, activityDate, role, onSubmit, onRemove,
   const yesList    = Object.keys(attendance).filter(n => attendance[n] === 'yes')
   const noList     = Object.keys(attendance).filter(n => attendance[n] === 'no')
   const undList    = Object.keys(attendance).filter(n => attendance[n] === 'undecided')
-  const real = (l: string[]) => l.filter(n => !isSampleName(n))   // サンプルは表示のみ。集計・コピーには含めない
-  const tag = (n: string) => isSampleName(n) ? n + SAMPLE_LABEL : n
   const allAnswered = Object.keys(attendance).filter(n => attendance[n])
 
   const labelMap: Record<string, string> = { yes: '参加', no: '不参加', undecided: '未定' }
@@ -81,9 +78,9 @@ export function Attendance({ attendance, activityDate, role, onSubmit, onRemove,
       )}
 
       <div className="stats-grid">
-        <div className="stat-card"><div className="stat-num" style={{ color: 'var(--accent)' }}>{real(yesList).length}</div><div className="stat-label">参加</div></div>
-        <div className="stat-card"><div className="stat-num" style={{ color: 'var(--red)' }}>{real(noList).length}</div><div className="stat-label">不参加</div></div>
-        <div className="stat-card"><div className="stat-num" style={{ color: 'var(--accent3)' }}>{real(undList).length}</div><div className="stat-label">未定</div></div>
+        <div className="stat-card"><div className="stat-num" style={{ color: 'var(--accent)' }}>{yesList.length}</div><div className="stat-label">参加</div></div>
+        <div className="stat-card"><div className="stat-num" style={{ color: 'var(--red)' }}>{noList.length}</div><div className="stat-label">不参加</div></div>
+        <div className="stat-card"><div className="stat-num" style={{ color: 'var(--accent3)' }}>{undList.length}</div><div className="stat-label">未定</div></div>
       </div>
 
       {/* 活動日表示・設定（admin のみ変更ボタンを表示） */}
@@ -123,7 +120,7 @@ export function Attendance({ attendance, activityDate, role, onSubmit, onRemove,
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <div className="card-title" style={{ marginBottom: 0, paddingBottom: 0, borderBottom: 'none' }}>
-              参加メンバー一覧（{real(yesList).length}人）
+              参加メンバー一覧（{yesList.length}人）
             </div>
             <button className="btn btn-sm" onClick={() => setShowList(v => !v)}>
               {showList ? '▲ 非表示' : '▼ 表示'}
@@ -132,12 +129,12 @@ export function Attendance({ attendance, activityDate, role, onSubmit, onRemove,
           {showList && (
             <div style={{ borderTop: '1px solid rgba(var(--ink-rgb),0.1)', paddingTop: '0.75rem', marginBottom: '0.75rem' }}>
               {yesList.map(name => (
-                <div key={name} style={{ fontSize: 14, lineHeight: 2 }}>{tag(name)}</div>
+                <div key={name} style={{ fontSize: 14, lineHeight: 2 }}>{name}</div>
               ))}
             </div>
           )}
           <button className="btn btn-accent" style={{ width: '100%' }}
-            onClick={() => navigator.clipboard.writeText(real(yesList).join('\n'))}>
+            onClick={() => navigator.clipboard.writeText(yesList.join('\n'))}>
             一覧をコピー
           </button>
         </div>
@@ -154,10 +151,10 @@ export function Attendance({ attendance, activityDate, role, onSubmit, onRemove,
             <tbody>
               {allAnswered.map(name => (
                 <tr key={name}>
-                  <td style={{ fontWeight: 500 }}>{tag(name)}</td>
+                  <td style={{ fontWeight: 500 }}>{name}</td>
                   <td><span style={{ fontSize: 12, fontWeight: 700, color: colorMap[attendance[name]] }}>{labelMap[attendance[name]]}</span></td>
                   {isAdmin && (
-                    <td>{!isSampleName(name) && <button className="btn btn-sm btn-danger" onClick={() => onRemove(name)}>削除</button>}</td>
+                    <td><button className="btn btn-sm btn-danger" onClick={() => onRemove(name)}>削除</button></td>
                   )}
                 </tr>
               ))}

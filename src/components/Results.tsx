@@ -1,3 +1,4 @@
+import { SampleCard } from './Sample'
 import { Match, AttendanceStatus, MemberLevel } from '../types'
 import { splitPlayers } from '../matchUtils'
 
@@ -13,7 +14,7 @@ export function Results({ attendance, memberLevels, matches, maskMap }: Props) {
   const attendees = Object.keys(attendance).filter(n => attendance[n] === 'yes')
 
   if (!matches.length) {
-    return <div className="empty">試合を組み合わせてから結果を入力してください</div>
+    return <div><SampleCard kind="results" /><div className="empty">試合を組み合わせてから結果を入力してください</div></div>
   }
 
   const wins: Record<string, { w: number; l: number; d: number; pts: number; pf: number; pa: number }> = {}
@@ -48,6 +49,7 @@ export function Results({ attendance, memberLevels, matches, maskMap }: Props) {
 
   return (
     <div>
+      <SampleCard kind="results" />
       <div className="stats-grid">
         <div className="stat-card"><div className="stat-num">{matches.length}</div><div className="stat-label">総試合数</div></div>
         <div className="stat-card"><div className="stat-num" style={{ color: 'var(--accent)' }}>{done}</div><div className="stat-label">終了</div></div>

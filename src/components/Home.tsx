@@ -1,4 +1,4 @@
-import { isSampleName } from '../matchUtils'
+import { SampleCard } from './Sample'
 import { useState } from 'react'
 import { AuthUser, AppState, AttendanceStatus } from '../types'
 
@@ -24,9 +24,9 @@ export function Home({ authUser, state, isManagementOnly, isActivityEnded, onSub
   const [guestError, setGuestError] = useState('')
 
   // 出欠統計
-  const yesList = Object.keys(attendance).filter(n => attendance[n] === 'yes' && !isSampleName(n))
-  const noList  = Object.keys(attendance).filter(n => attendance[n] === 'no' && !isSampleName(n))
-  const undList = Object.keys(attendance).filter(n => attendance[n] === 'undecided' && !isSampleName(n))
+  const yesList = Object.keys(attendance).filter(n => attendance[n] === 'yes')
+  const noList  = Object.keys(attendance).filter(n => attendance[n] === 'no')
+  const undList = Object.keys(attendance).filter(n => attendance[n] === 'undecided')
 
   // 自分の出欠状況（管理専用・名前未登録ゲスト以外）
   const myStatus = (isManagementOnly || (isGuest && !name)) ? null : attendance[name]
@@ -56,6 +56,7 @@ export function Home({ authUser, state, isManagementOnly, isActivityEnded, onSub
 
   return (
     <div className="home">
+      <SampleCard kind="home" />
       {/* 活動終了バナー */}
       {isActivityEnded && (
         <div className="card" style={{ borderColor: 'rgba(var(--red-rgb),0.3)', background: 'rgba(var(--red-rgb),0.08)', textAlign: 'center' }}>

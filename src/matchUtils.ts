@@ -17,5 +17,8 @@ export const INVALID_NAME_MESSAGE = '名前に「/」は使えません'
 
 // 表示用のサンプル参加者。一覧には出すが、組み合わせ・削除など実際の処理には関わらせない
 export const SAMPLE_NAMES = ['田中太郎']
-export const SAMPLE_LABEL = '（サンプル・集計対象外）'
 export const isSampleName = (name: string): boolean => SAMPLE_NAMES.includes(name.replace(/[ 　]/g, ''))
+
+// 名前をキーにしたデータからサンプル参加者を取り除く
+export const withoutSample = <T,>(obj: Record<string, T>): Record<string, T> =>
+  Object.fromEntries(Object.entries(obj).filter(([n]) => !isSampleName(n)))

@@ -1,7 +1,8 @@
+import { SampleCard } from './Sample'
 import { useState } from 'react'
 import { Match, MatchType, TierFilter, AttendanceStatus, MemberLevel, UserRole } from '../types'
 import { generateSingles, generateDoubles } from '../algorithm'
-import { splitPlayers, joinPlayers, isSampleName } from '../matchUtils'
+import { splitPlayers, joinPlayers } from '../matchUtils'
 
 interface Props {
   attendance: Record<string, AttendanceStatus>
@@ -39,9 +40,9 @@ export function Matches({ attendance, memberLevels, matches, courts, role, owner
   // admin と member は試合操作（スコア・ステータス）が可能。活動終了後はロック
   const canOperate = (role === 'admin' || role === 'member') && !isActivityEnded
 
-  // owner とサンプル参加者は試合に参加しないため除外する
+  // owner は試合に参加しないため除外する
   const attendees = Object.keys(attendance)
-    .filter(n => attendance[n] === 'yes' && !ownerNames.includes(n) && !isSampleName(n))
+    .filter(n => attendance[n] === 'yes' && !ownerNames.includes(n))
   const getPool = () => {
     if (tierFilter === 'exp') return attendees.filter(n => memberLevels[n] === 'exp')
     if (tierFilter === 'nov') return attendees.filter(n => memberLevels[n] !== 'exp')
@@ -84,6 +85,7 @@ export function Matches({ attendance, memberLevels, matches, courts, role, owner
 
   return (
     <div>
+      <SampleCard kind="matches" />
       {/* コート数（admin のみ編集可） */}
       <div className="card">
         <div className="card-title">コート数</div>

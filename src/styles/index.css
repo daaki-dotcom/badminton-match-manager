@@ -421,3 +421,18 @@ input[type=date] { color-scheme: light; }
   background: rgba(var(--accent-rgb),0.2);
   border-color: var(--accent);
 }
+
+/* サンプル参加者の表示例：破線の枠と斜線の背景で「本物のデータではない」ことを示す */
+.sample-card {
+  margin-bottom: 0.75rem; padding: 0.6rem 0.75rem; border-radius: 10px;
+  border: 1.5px dashed rgba(var(--muted-rgb), 0.6);
+  background: repeating-linear-gradient(135deg, rgba(var(--muted-rgb), 0.08) 0 8px, transparent 8px 16px);
+  opacity: 0.85; pointer-events: none; user-select: none;
+}
+.sample-head { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em; }
+.sample-line { font-size: 14px; line-height: 1.9; }
+.sample-pill {
+  display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; padding: 1px 7px; margin-left: 4px;
+  border-radius: 999px; border: 1px dashed rgba(var(--muted-rgb), 0.7); color: var(--text-muted);
+  background: var(--white); vertical-align: middle;
+}

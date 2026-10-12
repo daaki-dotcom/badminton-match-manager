@@ -16,6 +16,7 @@ import { Party } from './components/Party'
 import { Admin } from './components/Admin'
 import { Footer } from './components/Footer'
 import { AuthUser, Match, AttendanceStatus, MemberLevel, PartyStatus, UserRecord } from './types'
+import { withoutSample } from './matchUtils'
 
 type PendingGuestSetup = { guestId: string; name: string }
 
@@ -105,11 +106,21 @@ export default function App() {
     return Date.now() > d.getTime()
   })()
 
+  // サンプル参加者（田中太郎）は表示専用。画面に渡すデータからは外し、集計・組み合わせ・操作の対象にしない
+  const view = {
+    ...state,
+    attendance: withoutSample(state.attendance),
+    memberLevels: withoutSample(state.memberLevels),
+    party: withoutSample(state.party),
+    paymentClub: withoutSample(state.paymentClub),
+    paymentParty: withoutSample(state.paymentParty),
+  }
+
   // 未登録ゲスト用 名前マスクマップ（名前 → "参加者A/B/..."）
   const isUnregisteredGuest = role === 'guest' && !authUser.name
   const maskMap: Record<string, string> = (() => {
     if (!isUnregisteredGuest) return {}
-    const all = [...new Set([...memberNames, ...Object.keys(state.attendance)])].sort()
+    const all = [...new Set([...memberNames, ...Object.keys(view.attendance)])].sort()
     const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     return Object.fromEntries(all.map((n, i) => [n, `参加者${labels[i] ?? String(i + 1)}`]))
   })()
@@ -240,7 +251,7 @@ export default function App() {
       )}
 
       <Header
-        attendance={state.attendance}
+        attendance={view.attendance}
         matches={state.matches}
         connected={connected}
         syncing={syncing}
@@ -265,7 +276,7 @@ export default function App() {
         {activeTab === 'home' && (
           <Home
             authUser={authUser}
-            state={{ ...state, memberLevels: { ...state.memberLevels, ...dbLevels } }}
+            state={{ ...view, memberLevels: { ...view.memberLevels, ...dbLevels } }}
             isManagementOnly={managementOnlyNames.includes(authUser.name)}
             isActivityEnded={isActivityEnded}
             onSubmitAttendance={handleSubmitAttendance}
@@ -275,16 +286,16 @@ export default function App() {
         )}
         {activeTab === 'members' && (
           <Members
-            attendance={state.attendance}
-            memberLevels={state.memberLevels}
+            attendance={view.attendance}
+            memberLevels={view.memberLevels}
             dbLevels={dbLevels}
             memberNames={memberNames}
             managementOnlyNames={managementOnlyNames}
             courts={state.courts}
             role={role}
             maskMap={maskMap}
-            paymentClub={state.paymentClub}
-            paymentParty={state.paymentParty}
+            paymentClub={view.paymentClub}
+            paymentParty={view.paymentParty}
             onToggleLevel={handleToggleLevel}
             onTogglePaymentClub={handleTogglePaymentClub}
             onTogglePaymentParty={handleTogglePaymentParty}
@@ -292,8 +303,8 @@ export default function App() {
         )}
         {activeTab === 'matches' && (
           <Matches
-            attendance={state.attendance}
-            memberLevels={{ ...state.memberLevels, ...dbLevels }}
+            attendance={view.attendance}
+            memberLevels={{ ...view.memberLevels, ...dbLevels }}
             matches={state.matches}
             courts={state.courts}
             role={role}
@@ -308,16 +319,16 @@ export default function App() {
         )}
         {activeTab === 'results' && (
           <Results
-            attendance={state.attendance}
-            memberLevels={state.memberLevels}
+            attendance={view.attendance}
+            memberLevels={view.memberLevels}
             matches={state.matches}
             maskMap={maskMap}
           />
         )}
         {activeTab === 'party' && (
           <Party
-            attendance={state.attendance}
-            party={state.party}
+            attendance={view.attendance}
+            party={view.party}
             role={role}
             authUserName={authUser.name}
             maskMap={maskMap}
